@@ -320,6 +320,15 @@
   .mstmt td{padding:7px 12px;text-align:right;border-top:1px solid var(--line);font-family:"JetBrains Mono"}
   .mstmt td.l{text-align:left;font-family:Inter;font-weight:600}
   .mstmt tfoot td{font-weight:700;border-top:2px solid var(--line);background:var(--input-soft)}
+  .mstmt tr.mrow{cursor:pointer}
+  .mstmt tr.mrow:hover td{background:var(--input-soft)}
+  .mstmt tr.mrow-active td{background:var(--pos-soft)}
+  .mstmt tr.mrow-active td.l{box-shadow:inset 3px 0 0 var(--pos)}
+  .mfilter{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:0 18px 4px}
+  .mfilter .mfl{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+  .mpill{cursor:pointer;border:1px solid var(--line);background:var(--panel,#fff);color:var(--muted);font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;font-family:"JetBrains Mono"}
+  .mpill:hover{border-color:var(--blue);color:var(--blue)}
+  .mpill.active{background:var(--ink);color:#fff;border-color:var(--ink)}
   .legend{display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:13px 18px;border-top:1px solid var(--line-2);font-size:11.5px;color:var(--muted)}
   .legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
   .note{margin-top:18px;background:#FFF;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:13px 16px;font-size:12.5px;color:#41506A;display:flex;gap:10px}
@@ -503,13 +512,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.2.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.3.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="mark">Core<span class="v">V</span></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.2.0</span></div>
+    <div class="brand"><span class="mark">Core<span class="v">V</span></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.3.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -691,6 +700,7 @@
       <div class="reptabs" id="repTabs"></div>
       <div class="panel">
         <div class="repbar" id="repBar"></div>
+        <div id="monthFilterBar" class="mfilter"></div>
         <div class="scroll">
           <table class="deals"><thead><tr><th class="l">Type</th><th class="l">Customer</th><th>Gross (AED)</th><th>Excl VAT</th><th class="l">Participation</th><th>Applicable %</th><th>Commission</th><th>Collected %</th><th>Eligible</th><th>Pending</th><th class="l">Closed</th><th>Future</th><th></th></tr></thead>
             <tbody id="dealsBody"></tbody><tfoot id="dealsFoot"></tfoot></table>
@@ -1106,6 +1116,7 @@ const BASE_REPS = [
 const BASE_REFS = [{cust:"Mohammad Sharafi",gross:49221.18,coll:1,month:"Jan/26"}];
 
 let RULES=structuredClone(BASE_RULES), MATRIX=structuredClone(BASE_MATRIX), REPS=structuredClone(BASE_REPS), REFS=structuredClone(BASE_REFS), sel=0;
+let monthFilter="";
 let plansOpen=new Set();
 
 const fmt=n=>Math.round(n).toLocaleString("en-US");
@@ -1247,7 +1258,18 @@ function renderRep(){
 
   let body="",tot={ex:0,comm:0,elig:0,pend:0};
   const gatedByMonth={}; R.months.forEach(mo=>{gatedByMonth[mo.month]=mo.R.gated;});
+  // month filter bar
+  const monthsAvail=R.months.map(mo=>mo.month);
+  if(monthFilter && !monthsAvail.includes(monthFilter)) monthFilter="";
+  const pill=(val,label,active)=>`<div class="mpill ${active?'active':''}" data-m="${val}">${label}</div>`;
+  $("monthFilterBar").innerHTML = monthsAvail.length
+    ? `<span class="mfl">Filter by month</span>`+pill("","All",monthFilter==="")+monthsAvail.map(m=>pill(m,(m==="—"?"Unscheduled":m),monthFilter===m)).join("")
+    : "";
+  $("monthFilterBar").querySelectorAll(".mpill").forEach(p=>p.addEventListener("click",()=>{ monthFilter=p.dataset.m; renderRep(); }));
+  let shown=0;
   r.deals.forEach((d,i)=>{
+    if(monthFilter && (d.month||"—")!==monthFilter) return;
+    shown++;
     const c=dealCalc(d); const gated=gatedByMonth[d.month||"—"]||false; const elig=gated?0:c.elig, pend=gated?0:c.pend;
     tot.ex+=c.ex;tot.comm+=c.comm;tot.elig+=elig;tot.pend+=pend;
     const planActive=d.future&&d.plan&&d.plan.length;
@@ -1268,8 +1290,8 @@ function renderRep(){
       <td><button class="del" data-i="${i}">×</button></td></tr>`;
     if(plansOpen.has(i)&&d.future){ body+=planEditor(d,i); }
   });
-  $("dealsBody").innerHTML=body||`<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:18px">No deals — add the rep's first deal below.</td></tr>`;
-  $("dealsFoot").innerHTML=r.deals.length?`<tr><td class="l">Totals</td><td></td><td></td><td>${fmt(tot.ex)}</td><td></td><td></td><td>${f2(tot.comm)}</td><td></td><td style="color:var(--pos)">${f2(tot.elig)}</td><td style="color:var(--pend)">${f2(tot.pend)}</td><td></td><td></td><td></td></tr>`:"";
+  $("dealsBody").innerHTML=body||`<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:18px">${monthFilter?("No deals in "+(monthFilter==="—"?"Unscheduled":monthFilter)+" — clear the filter or add one below."):"No deals — add the rep's first deal below."}</td></tr>`;
+  $("dealsFoot").innerHTML=shown?`<tr><td class="l">${monthFilter?(monthFilter==="—"?"Unscheduled":monthFilter)+" totals":"Totals"}</td><td></td><td></td><td>${fmt(tot.ex)}</td><td></td><td></td><td>${f2(tot.comm)}</td><td></td><td style="color:var(--pos)">${f2(tot.elig)}</td><td style="color:var(--pend)">${f2(tot.pend)}</td><td></td><td></td><td></td></tr>`:"";
   bindDeals(r);
 
   // projection
@@ -1282,10 +1304,11 @@ function renderRep(){
   const months=R.months;
   $("monthlyBox").innerHTML = months.length ? `<div class="mstmt"><div class="ph">Monthly commission — each month gated at ${pct(RULES.thr,0)} minimum and accelerated on that month's closures</div>
     <table><thead><tr><th class="l">Month</th><th>Credited</th><th>Attain</th><th class="l">Status</th><th>Earned</th><th>Eligible</th><th>Pending</th></tr></thead><tbody>`+
-    months.map(mo=>{const M=mo.R; const lbl=mo.month==="—"?"Unscheduled":mo.month;
+    months.map(mo=>{const M=mo.R; const lbl=mo.month==="—"?"Unscheduled":mo.month; const act=monthFilter===mo.month?" mrow-active":"";
       const status=M.gated?`<span class="att-pill a-min">below min</span>`:(M.accelEarned>0?`<span class="att-pill a-on">accelerator</span>`:`<span class="att-pill a-below">base</span>`);
-      return `<tr><td class="l">${lbl}</td><td>${fmt(M.tgt)}</td><td>${pct(M.attain,0)}</td><td class="l">${status}</td><td>${f2(M.earned)}</td><td style="color:var(--pos)">${f2(M.eligible)}</td><td style="color:var(--pend)">${f2(M.pending)}</td></tr>`;}).join("")+
+      return `<tr class="mrow${act}" data-m="${mo.month}"><td class="l">${lbl}</td><td>${fmt(M.tgt)}</td><td>${pct(M.attain,0)}</td><td class="l">${status}</td><td>${f2(M.earned)}</td><td style="color:var(--pos)">${f2(M.eligible)}</td><td style="color:var(--pend)">${f2(M.pending)}</td></tr>`;}).join("")+
     `</tbody><tfoot><tr><td class="l">Total</td><td>${fmt(R.tgt)}</td><td></td><td></td><td>${f2(R.earned)}</td><td style="color:var(--pos)">${f2(R.eligible)}</td><td style="color:var(--pend)">${f2(R.pending)}</td></tr></tfoot></table></div>` : "";
+  $("monthlyBox").querySelectorAll("tr.mrow").forEach(tr=>tr.addEventListener("click",()=>{ monthFilter = (monthFilter===tr.dataset.m? "" : tr.dataset.m); renderRep(); }));
   $("accelBox").innerHTML="";
 }
 function planEditor(d,i){
@@ -1619,7 +1642,7 @@ function emailRef(){
 }
 
 /* ---------- wiring ---------- */
-$("addDeal").addEventListener("click",()=>{REPS[sel].deals.push({type:"B2C",cust:"New customer",gross:0,tag:"FULL",coll:0,month:"",future:false,plan:[]});renderRep();renderSummary();publishStore();});
+$("addDeal").addEventListener("click",()=>{REPS[sel].deals.push({type:"B2C",cust:"New customer",gross:0,tag:"FULL",coll:0,month:(monthFilter&&monthFilter!=="—")?monthFilter:"",future:false,plan:[]});renderRep();renderSummary();publishStore();});
 $("addRef").addEventListener("click",()=>{REFS.push({cust:"New referral",gross:0,coll:0,month:""});renderRefs();renderSummary();});
 $("ref_pdf").addEventListener("click",referralPDF);
 $("ref_email").addEventListener("click",emailRef);
