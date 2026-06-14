@@ -527,13 +527,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.6.1 · 2026-06-14</div>
+      <div class="gate-ver">v1.6.2 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="mark">Core<span class="v">V</span></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.6.1</span></div>
+    <div class="brand"><span class="mark">Core<span class="v">V</span></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.6.2</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -659,6 +659,7 @@
         <div class="toolrow" style="margin-top:12px">
           <button class="btn hub" id="hs_fetch">⤓ Fetch closed-won deals</button>
           <button class="btn" id="hs_auto">Auto-pull on open: <b id="hs_autostate">on</b></button>
+          <button class="btn danger" id="hs_reset">Reset deals &amp; re-sync</button>
         </div>
         <details style="margin-top:14px">
           <summary style="cursor:pointer;font-size:12px;color:var(--muted)">CSV import (fallback)</summary>
@@ -1217,10 +1218,10 @@ const BASE_MATRIX = {
   "HALF":{target:0.5,earn:0.5,cls:"half"}, "TEAMING":{target:0.3,earn:0.3,cls:"team"}, "N/A":{target:0.0,earn:0.0,cls:"na"},
 };
 const BASE_REPS = [
-  {name:"Marios",target:270000,deals:[{type:"B2C",cust:"Dee Alisilmi",gross:42575.53,tag:"FULL",coll:1,month:"Apr/26",future:false,plan:[]}]},
-  {name:"Fatima",target:270000,deals:[{type:"B2C",cust:"Dee Alisilmi",gross:42575.53,tag:"FULL",coll:1,month:"Apr/26",future:false,plan:[]}]},
-  {name:"Connor",target:270000,deals:[{type:"B2C",cust:"Dee Alisilmi",gross:42575.53,tag:"FULL",coll:1,month:"Apr/26",future:false,plan:[]}]},
-  {name:"Wafiq",target:945000,deals:[{type:"B2B",cust:"TADAWI",gross:432996.6,tag:"TEAMING+",coll:0.3,month:"Nov/25",future:true,plan:[]}]},
+  {name:"Marios",target:270000,deals:[]},
+  {name:"Fatima",target:270000,deals:[]},
+  {name:"Connor",target:270000,deals:[]},
+  {name:"Wafiq",target:945000,deals:[]},
   {name:"Jawdat",target:498000,deals:[]},
 ];
 const BASE_REFS = [{cust:"Mohammad Sharafi",gross:49221.18,coll:1,month:"Jan/26"}];
@@ -1516,7 +1517,12 @@ function renderAll(){ renderMatrix(); renderSummary(); renderTabs(); renderRep()
 function monthFromISO(s){ if(!s)return""; const d=new Date(s); if(isNaN(d))return""; return MON[d.getMonth()]+"/"+String(d.getFullYear()).slice(2); }
 function findRep(name){ if(!name)return null; return REPS.find(r=>r.name.toLowerCase()===name.toLowerCase()); }
 function pushHubDeal(rep,{hsId,cust,amount,month,tag,collab}){
-  if(hsId){ const ex=rep.deals.find(d=>d.hsId===hsId); if(ex){ ex.gross=amount||0; ex.cust=cust||ex.cust; ex.month=month||ex.month; if(collab!==undefined)ex.collab=collab; return false; } }
+  if(hsId){
+    let ex=rep.deals.find(d=>d.hsId===hsId);
+    // adopt a matching manual/seed deal (same customer + month, no hsId yet) instead of duplicating
+    if(!ex) ex=rep.deals.find(d=>!d.hsId && (d.cust||"").trim().toLowerCase()===(cust||"").trim().toLowerCase() && (d.month||"")===(month||""));
+    if(ex){ ex.hsId=hsId; ex.gross=amount||0; ex.cust=cust||ex.cust; ex.month=month||ex.month; if(collab!==undefined)ex.collab=collab; return false; }
+  }
   rep.deals.push({type:"B2B",cust:cust||"HubSpot deal",gross:amount||0,tag:tag||"FULL",coll:0,month:month||"",future:false,plan:[],hsId:hsId||null,collab:collab||[]}); return true;
 }
 function addHubDeal(cust,amount,owner,month,assign){
@@ -1650,6 +1656,11 @@ async function hsFetchClosedWon(silent){
   }catch(e){ hsStatus("Fetch failed: "+e.message,"err"); }
 }
 function hsToggleAuto(){ HS.auto=!HS.auto; hsPersist(); const s=$("hs_autostate"); if(s)s.textContent=HS.auto?"on":"off"; }
+function hsResetDeals(){
+  if(!confirm("Clear ALL deals for every rep and re-pull from HubSpot? Manually-entered deals will be removed."))return;
+  REPS.forEach(r=>{ r.deals=[]; }); renderAll();
+  if(hsConnected()) hsFetchClosedWon(false); else hsStatus("Deals cleared. Connect HubSpot to re-pull, or add deals manually.","ok");
+}
 function hsInit(){ hsLoad(); const s=$("hs_autostate"); if(s)s.textContent=HS.auto?"on":"off"; hsRefreshChip();
   if(hsConnected()&&HS.auto&&REPS.some(r=>HS.ownerMap[r.name])) hsFetchClosedWon(true); }
 function parseCSV(text){
@@ -1816,6 +1827,7 @@ $("hs_workerlink").addEventListener("click",hsToggleWorker);
 $("hs_modal").addEventListener("click",e=>{ if(e.target.id==="hs_modal") hsCloseModal(); });
 $("hs_fetch").addEventListener("click",()=>hsFetchClosedWon(false));
 $("hs_auto").addEventListener("click",hsToggleAuto);
+$("hs_reset").addEventListener("click",hsResetDeals);
 $("hs_import").addEventListener("click",()=>importCSVText($("hs_csv").value));
 $("hs_file").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>importCSVText(rd.result);rd.readAsText(f);});
 
