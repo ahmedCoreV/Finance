@@ -468,8 +468,7 @@
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Authorized: Ahmed · Kamal · Sami</div>
       <div class="gate-diag">If sign-in fails, register this redirect URI in Azure → App registration → Authentication, under the <b>Single-page application</b> platform:
-        <code id="redirUri"></code>
-        <button id="copyUri" class="diag-copy">Copy URI</button>
+        <code id="redirUri"></code><button id="copyUri" class="diag-copy">Copy URI</button>
       </div>
     </div>
   </div>
@@ -593,26 +592,17 @@
 
     <!-- HUBSPOT -->
     <section class="blk">
-      <div class="blkhead"><h2>HubSpot</h2><span class="why">— pull closed-won deals via your Cloudflare Worker proxy: deal value → Gross (AED), deal name → customer, owner → rep, close date → month.</span></div>
+      <div class="blkhead"><h2>HubSpot</h2><span class="why">— connected on the backend (token lives in your Cloudflare Worker secret). Map reps to owners, then pull closed-won deals: value → Gross (AED), name → customer, close date → month.</span></div>
       <div class="panel pad">
-        <div class="hubrow">
-          <div class="field" style="flex:2;min-width:230px"><label>Cloudflare Worker proxy URL</label><input id="hs_proxy" class="hub-in" type="text" placeholder="https://your-worker.workers.dev"></div>
-          <div class="field" style="flex:2;min-width:200px"><label>Private app token</label><input id="hs_token" class="hub-in" type="password" placeholder="pat-..."></div>
-          <button class="btn hub" id="hs_connect">Connect</button>
-          <button class="btn" id="hs_worker">Worker setup</button>
-        </div>
-        <div class="hub-status" id="hs_status">HubSpot blocks direct browser calls, so connect through a free Cloudflare Worker (click <b>Worker setup</b>). Or use CSV import below.</div>
-        <div id="hs_workerbox" style="display:none;margin-top:10px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Deploy at dash.cloudflare.com → Workers &amp; Pages → Create → paste &amp; Deploy, then paste the <code>*.workers.dev</code> URL above. It only forwards requests; the token stays in your browser.</div>
-          <div style="position:relative"><button class="btn sm" id="hs_copyworker" style="position:absolute;top:6px;right:6px;z-index:2">Copy</button><pre id="hs_workercode" class="hs-pre"></pre></div>
-        </div>
+        <div class="hub-status" id="hs_status">Connecting to HubSpot…</div>
         <div class="toolrow" style="margin-top:12px">
           <button class="btn" id="hs_loadowners">Load owners</button>
           <button class="btn hub" id="hs_fetch">⤓ Fetch closed-won deals</button>
+          <button class="btn" id="hs_auto">Auto-pull on open: <b id="hs_autostate">on</b></button>
         </div>
         <div id="hs_ownermap" class="hs-ownermap"></div>
         <details style="margin-top:14px">
-          <summary style="cursor:pointer;font-size:12px;color:var(--muted)">CSV import (fallback — no proxy needed)</summary>
+          <summary style="cursor:pointer;font-size:12px;color:var(--muted)">CSV import (fallback)</summary>
           <div style="margin-top:8px">
             <textarea class="csv" id="hs_csv" placeholder="Paste HubSpot deals CSV (headers: Deal Name, Amount, Deal owner, Close Date, Deal Stage)…"></textarea>
             <div class="toolrow" style="margin-top:8px"><input type="file" id="hs_file" accept=".csv" style="font-size:12px"><button class="btn primary" id="hs_import">Import CSV</button></div>
@@ -760,11 +750,10 @@
   function clearLocks(){ try{Object.keys(localStorage).filter(k=>k.indexOf('msal')>=0&&/interaction.status/i.test(k)).forEach(k=>localStorage.removeItem(k));}catch(_){} try{Object.keys(sessionStorage).filter(k=>k.indexOf('msal')>=0).forEach(k=>sessionStorage.removeItem(k));}catch(_){} }
   function fmtErr(e){
     const m=(e&&(e.errorCode||e.message))||String(e||'unknown');
-    if(/9002326|cross-origin token redemption|single[- ]?page/i.test(m)) return '<b>Azure platform mismatch.</b> This app must be registered as a <b>Single-page application</b>. In Azure → App registration → <b>Authentication</b>, remove the URI from “Web” and add it under <b>Single-page application</b>. URI to register is shown below.';
-    if(/AADSTS50011|redirect_uri|reply url|does not match|redirect URI/i.test(m)) return '<b>Redirect URI not registered.</b> Add <i>exactly</i> the URI shown below in Azure → Authentication → Single-page application (it must match character-for-character).';
-    if(/AADSTS65001|consent|AADSTS90094/i.test(m)) return '<b>Admin consent needed.</b> An admin must grant consent for this app in Azure, then try again.';
-    if(/AADSTS700016|application.*not found|unauthorized_client/i.test(m)) return '<b>App not found in this tenant.</b> Confirm the Azure app registration exists in core-velocity.com.';
-    if(/interaction_in_progress/i.test(m)){ clearLocks(); return 'A previous sign-in was still in progress — cleared it. Please click sign in again.'; }
+    if(/9002326|cross-origin token redemption|single[- ]?page/i.test(m)) return '<b>Azure platform mismatch.</b> Register the redirect URI under <b>Single-page application</b> (not Web) in Azure → Authentication. URI below.';
+    if(/AADSTS50011|redirect_uri|reply url|does not match|redirect URI/i.test(m)) return '<b>Redirect URI not registered.</b> Add exactly the URI below in Azure → Authentication → Single-page application.';
+    if(/AADSTS65001|consent|AADSTS90094/i.test(m)) return '<b>Admin consent needed</b> for this app in Azure.';
+    if(/interaction_in_progress/i.test(m)){ clearLocks(); return 'A previous sign-in was still in progress — cleared it, click sign in again.'; }
     if(/user_cancelled|user_cancel/i.test(m)) return '';
     return 'Sign-in error: '+m;
   }
@@ -775,39 +764,26 @@
   }
   function init(){
     if(typeof msal==='undefined'){ showErr('Microsoft sign-in library failed to load — check your connection and reload.'); return; }
-    try{ inst=new msal.PublicClientApplication({auth:CFG,cache:{cacheLocation:'localStorage'}}); }
-    catch(e){ showErr(fmtErr(e)); return; }
-    inst.initialize()
-      .then(()=>inst.handleRedirectPromise())
-      .then(rr=>{
-        if(rr&&rr.account){ return finish(rr.account); }
-        const a=inst.getAllAccounts();
-        if(a.length){ const nm=nameFor(a[0].username); if(nm){ account=a[0]; unlock(nm); return; } forget(); }
-      })
-      .catch(e=>{ const m=fmtErr(e); if(m) showErr(m); });
+    try{ inst=new msal.PublicClientApplication({auth:CFG,cache:{cacheLocation:'localStorage'}}); }catch(e){ showErr(fmtErr(e)); return; }
+    inst.initialize().then(()=>inst.handleRedirectPromise()).then(rr=>{
+      if(rr&&rr.account){ return finish(rr.account); }
+      const a=inst.getAllAccounts();
+      if(a.length){ const nm=nameFor(a[0].username); if(nm){ account=a[0]; unlock(nm); return; } forget(); }
+    }).catch(e=>{ const m=fmtErr(e); if(m) showErr(m); });
   }
   function go(useRedirect){
     if(!inst){ showErr('Still loading — try again in a moment.'); return; }
     clearErr(); clearLocks(); btn.disabled=true;
     const req={scopes:['User.Read'],prompt:'select_account'};
-    if(useRedirect){
-      inst.loginRedirect(req).catch(e=>{ btn.disabled=false; const m=fmtErr(e); if(m) showErr(m); });
-    } else {
-      inst.loginPopup(req).then(res=>{ btn.disabled=false; finish(res.account); })
-        .catch(e=>{ btn.disabled=false; const msg=(e&&(e.errorCode||e.message))||'';
-          if(/popup_window_error|running in a popup|popup.*block/i.test(msg)){ go(true); return; }
-          const m=fmtErr(e); if(m) showErr(m); });
-    }
+    if(useRedirect){ inst.loginRedirect(req).catch(e=>{ btn.disabled=false; const m=fmtErr(e); if(m) showErr(m); }); }
+    else { inst.loginPopup(req).then(res=>{ btn.disabled=false; finish(res.account); }).catch(e=>{ btn.disabled=false; const msg=(e&&(e.errorCode||e.message))||'';
+      if(/popup_window_error|running in a popup|popup.*block/i.test(msg)){ go(true); return; } const m=fmtErr(e); if(m) showErr(m); }); }
   }
-  function signOut(){
-    try{ inst.logoutRedirect({account,postLogoutRedirectUri:CFG.redirectUri}); }
-    catch(_){ forget(); lock(); }
-  }
-  // Diagnostics — show the exact URI to register
+  function signOut(){ try{ inst.logoutRedirect({account,postLogoutRedirectUri:CFG.redirectUri}); }catch(_){ forget(); lock(); } }
   const ru=$('redirUri'); if(ru) ru.textContent=CFG.redirectUri;
   const cu=$('copyUri'); if(cu) cu.addEventListener('click',()=>{navigator.clipboard.writeText(CFG.redirectUri).then(()=>{const o=cu.textContent;cu.textContent='✓ copied';setTimeout(()=>cu.textContent=o,1400);});});
-  btn.addEventListener('click',()=>go(true));            // primary: redirect (most reliable)
-  altBtn.addEventListener('click',()=>go(false));        // fallback: popup
+  btn.addEventListener('click',()=>go(true));
+  altBtn.addEventListener('click',()=>go(false));
   $('signOut').addEventListener('click',signOut);
   init();
 })();
@@ -1313,42 +1289,39 @@ function addHubDeal(cust,amount,owner,month,assign){
   pushHubDeal(rep,{cust,amount,month});
 }
 
-/* ---- HubSpot live via Cloudflare Worker proxy (inherited from Sales Tracker) ---- */
-const HS_KEYS={proxy:"corev_hs_proxy",token:"corev_hs_token",map:"corev_hs_ownermap"};
-let HS={proxy:"",token:"",owners:[],ownerMap:{}};
-function hsLoad(){ try{ HS.proxy=localStorage.getItem(HS_KEYS.proxy)||""; HS.token=localStorage.getItem(HS_KEYS.token)||""; HS.ownerMap=JSON.parse(localStorage.getItem(HS_KEYS.map)||"{}"); }catch(_){ } }
-function hsPersist(){ try{ localStorage.setItem(HS_KEYS.proxy,HS.proxy); localStorage.setItem(HS_KEYS.token,HS.token); localStorage.setItem(HS_KEYS.map,JSON.stringify(HS.ownerMap)); }catch(_){ } }
+/* ---- HubSpot — backend-connected via Cloudflare Worker (token lives in the Worker secret) ---- */
+const HS_PROXY="https://little-firefly-ed38.ahmedabuhakmeh.workers.dev";
+const HS_KEYS={map:"corev_hs_ownermap",auto:"corev_hs_auto"};
+let HS={owners:[],ownerMap:{},auto:true,ready:false};
+function hsLoad(){ try{ HS.ownerMap=JSON.parse(localStorage.getItem(HS_KEYS.map)||"{}"); const a=localStorage.getItem(HS_KEYS.auto); HS.auto=(a===null?true:a==="1"); }catch(_){ } }
+function hsPersist(){ try{ localStorage.setItem(HS_KEYS.map,JSON.stringify(HS.ownerMap)); localStorage.setItem(HS_KEYS.auto,HS.auto?"1":"0"); }catch(_){ } }
 function hsStatus(msg,kind){ const el=$("hs_status"); if(!el)return; el.className="hub-status"+(kind?" "+kind:""); el.innerHTML=msg; }
-function hsUrl(path){ const b=(HS.proxy||"").trim().replace(/\/+$/,""); return b?b+path:null; }
+function hsUrl(path){ return HS_PROXY.replace(/\/+$/,"")+path; }
 async function hsApi(path,opts={}){
-  if(!HS.token) throw new Error("Paste your Private App token first.");
   const url=path.startsWith("http")?path:hsUrl(path);
-  if(!url) throw new Error("Set the Cloudflare Worker proxy URL first (HubSpot blocks direct browser calls).");
-  const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{}),"Authorization":"Bearer "+HS.token}});
-  if(r.status===401) throw new Error("Token rejected (401) — check the Private App token.");
-  if(!r.ok){ const t=await r.text();
-    if(r.status===403&&/MISSING_SCOPES|required scopes/i.test(t)) throw new Error("Private App missing a read scope — add crm.objects.deals.read &amp; crm.objects.owners.read in HubSpot, save, retry.");
-    throw new Error("HubSpot "+r.status+": "+t.slice(0,160)); }
+  const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{})}});
+  if(r.status===401||r.status===403){ const t=await r.text();
+    if(/MISSING_SCOPES|required scopes/i.test(t)) throw new Error("The Worker's token is missing a read scope — add crm.objects.deals.read &amp; crm.objects.owners.read to the Private App, then redeploy.");
+    throw new Error("Auth error ("+r.status+") — check the HUBSPOT_TOKEN secret in your Worker."); }
+  if(!r.ok){ const t=await r.text(); throw new Error("HubSpot "+r.status+": "+t.slice(0,160)); }
   return r.json();
 }
-async function hsConnect(){
-  HS.proxy=$("hs_proxy").value.trim(); HS.token=$("hs_token").value.trim();
-  if(!HS.token||!/^pat-/i.test(HS.token)){ hsStatus("That doesn't look like a Private App token (it should start with <code>pat-</code>).","err"); return; }
-  if(!HS.proxy){ hsStatus("Enter your Cloudflare Worker proxy URL — HubSpot blocks direct browser calls. Click <b>Worker setup</b>.","err"); return; }
-  hsStatus("Testing connection…");
-  try{ await hsApi("/crm/v3/owners?limit=1"); hsPersist(); hsStatus("Connected ✓ — loading owners so you can map them to your reps.","ok"); await hsLoadOwners(); }
-  catch(e){ hsStatus("Connection failed: "+e.message,"err"); }
+async function hsAutoConnect(){
+  hsStatus("Connecting to HubSpot…");
+  try{ await hsApi("/crm/v3/owners?limit=1"); HS.ready=true; hsStatus("Connected to HubSpot ✓ via your Worker.","ok"); await hsLoadOwners(true); }
+  catch(e){ HS.ready=false; hsStatus("Not connected: "+e.message+" — check the Worker is deployed and the HUBSPOT_TOKEN secret is set.","err"); }
 }
-async function hsLoadOwners(){
-  if(!HS.token||!HS.proxy){ hsStatus("Enter the proxy URL and token, then Connect.","err"); return; }
-  hsStatus("Loading HubSpot owners…");
+async function hsLoadOwners(silent){
+  if(!silent) hsStatus("Loading HubSpot owners…");
   try{
     const all=[]; let after=null,guard=0;
     do{ const data=await hsApi("/crm/v3/owners?limit=100"+(after?"&after="+encodeURIComponent(after):""));
         (data.results||[]).forEach(o=>all.push({id:o.id,email:o.email||"",name:((o.firstName||"")+" "+(o.lastName||"")).trim()||o.email||"(unnamed)"}));
         after=data.paging&&data.paging.next&&data.paging.next.after; guard++; }while(after&&guard<10);
     all.sort((a,b)=>a.name.localeCompare(b.name)); HS.owners=all; hsRenderOwnerMap();
-    hsStatus("Loaded "+all.length+" owners. Map each rep to a HubSpot owner, then fetch.","ok");
+    const mappedN=REPS.filter(r=>HS.ownerMap[r.name]).length;
+    if(HS.auto && mappedN){ await hsFetchClosedWon(true); }
+    else if(!silent){ hsStatus("Loaded "+all.length+" owners. Map each rep to a HubSpot owner, then fetch.","ok"); }
   }catch(e){ hsStatus("Could not load owners: "+e.message,"err"); }
 }
 function hsRenderOwnerMap(){
@@ -1357,11 +1330,10 @@ function hsRenderOwnerMap(){
   box.innerHTML=REPS.map(r=>`<div class="hs-ownerrow"><span>${r.name}</span><span style="color:var(--muted)">→</span><select class="d-sel" data-rep="${r.name}">${opts(HS.ownerMap[r.name]||"")}</select></div>`).join("");
   box.querySelectorAll("select[data-rep]").forEach(s=>s.addEventListener("change",e=>{const rep=e.target.dataset.rep,v=e.target.value; if(v)HS.ownerMap[rep]=v; else delete HS.ownerMap[rep]; hsPersist();}));
 }
-async function hsFetchClosedWon(){
-  if(!HS.token||!HS.proxy){ hsStatus("Connect first.","err"); return; }
+async function hsFetchClosedWon(silent){
   const mapped=REPS.filter(r=>HS.ownerMap[r.name]);
   if(!mapped.length){ hsStatus("Map at least one rep to a HubSpot owner first (Load owners).","err"); return; }
-  hsStatus("Fetching closed-won deals…"); let total=0,added=0;
+  if(!silent) hsStatus("Fetching closed-won deals…"); let total=0,added=0;
   try{
     for(const rep of mapped){
       const ownerId=HS.ownerMap[rep.name]; let after,guard=0;
@@ -1377,26 +1349,11 @@ async function hsFetchClosedWon(){
         after=data.paging&&data.paging.next&&data.paging.next.after; guard++;
       }while(after&&guard<50);
     }
-    hsStatus(`Fetched ${total} closed-won deal${total===1?"":"s"} across ${mapped.length} rep${mapped.length===1?"":"s"} (${added} new, rest updated).`,"ok");
+    hsStatus(`Synced ${total} closed-won deal${total===1?"":"s"} across ${mapped.length} rep${mapped.length===1?"":"s"} (${added} new, rest updated).`,"ok");
     renderAll();
   }catch(e){ hsStatus("Fetch failed: "+e.message,"err"); }
 }
-const HS_WORKER=`export default {
-  async fetch(request) {
-    const cors = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Authorization,Content-Type'};
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-    const url = new URL(request.url);
-    const upstream = await fetch('https://api.hubapi.com' + url.pathname + url.search, {
-      method: request.method,
-      headers: { 'Authorization': request.headers.get('Authorization') || '', 'Content-Type': 'application/json' },
-      body: ['GET','HEAD'].includes(request.method) ? undefined : await request.text()
-    });
-    const body = await upstream.text();
-    return new Response(body, { status: upstream.status, headers: { ...cors, 'Content-Type': 'application/json' } });
-  }
-};`;
-function hsToggleWorker(){ const b=$("hs_workerbox"); b.style.display=b.style.display==="none"?"block":"none"; if(b.style.display==="block")$("hs_workercode").textContent=HS_WORKER; }
-function hsCopyWorker(){ navigator.clipboard.writeText(HS_WORKER).then(()=>{const b=$("hs_copyworker"),o=b.textContent;b.textContent="✓ Copied";setTimeout(()=>b.textContent=o,1500);}); }
+function hsToggleAuto(){ HS.auto=!HS.auto; hsPersist(); const s=$("hs_autostate"); if(s)s.textContent=HS.auto?"on":"off"; }
 function parseCSV(text){
   const rows=[];let i=0,f="",row=[],q=false;
   while(i<text.length){const c=text[i];
@@ -1523,11 +1480,9 @@ $("addDeal").addEventListener("click",()=>{REPS[sel].deals.push({type:"B2C",cust
 $("addRef").addEventListener("click",()=>{REFS.push({cust:"New referral",gross:0,coll:0,month:""});renderRefs();renderSummary();});
 $("ref_pdf").addEventListener("click",referralPDF);
 $("ref_email").addEventListener("click",emailRef);
-$("hs_connect").addEventListener("click",hsConnect);
-$("hs_loadowners").addEventListener("click",hsLoadOwners);
-$("hs_fetch").addEventListener("click",hsFetchClosedWon);
-$("hs_worker").addEventListener("click",hsToggleWorker);
-$("hs_copyworker").addEventListener("click",hsCopyWorker);
+$("hs_loadowners").addEventListener("click",()=>hsLoadOwners(false));
+$("hs_fetch").addEventListener("click",()=>hsFetchClosedWon(false));
+$("hs_auto").addEventListener("click",hsToggleAuto);
 $("hs_import").addEventListener("click",()=>importCSVText($("hs_csv").value));
 $("hs_file").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>importCSVText(rd.result);rd.readAsText(f);});
 
@@ -1536,9 +1491,9 @@ function bindRules(){
   map.forEach(([id,key])=>{const el=$(id);el.value=+(RULES[key]*100).toFixed(2);el.addEventListener("input",()=>{RULES[key]=(parseFloat(el.value)||0)/100;renderAll();});});
 }
 hsLoad();
-if($("hs_proxy"))$("hs_proxy").value=HS.proxy;
-if($("hs_token"))$("hs_token").value=HS.token;
+if($("hs_autostate"))$("hs_autostate").textContent=HS.auto?"on":"off";
 bindRules(); renderAll();
+hsAutoConnect();
 
 })();</script>
 <script>(function(){
