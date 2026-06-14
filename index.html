@@ -288,6 +288,7 @@
   .d-der.pend{color:var(--pend)}
   .collauto{font-family:"JetBrains Mono";font-size:11.5px;color:var(--pend);font-weight:600}
   .collab-tag{font-size:10px;color:var(--blue);margin-top:3px;font-weight:600;max-width:160px}
+  .accel-chip{font-size:11px;color:var(--pos);font-weight:700;background:var(--pos-soft);border-radius:6px;padding:1px 6px;margin-left:4px}
   .planbtn{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;color:var(--muted)}
   .planbtn.on{background:var(--pend-soft);border-color:var(--pend);color:var(--pend)}
   .del{cursor:pointer;color:#B7C0CE;border:0;background:none;font-size:16px;padding:2px 6px}
@@ -527,13 +528,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.6.4 · 2026-06-14</div>
+      <div class="gate-ver">v1.6.5 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="mark">Core<span class="v">V</span></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.6.4</span></div>
+    <div class="brand"><span class="mark">Core<span class="v">V</span></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.6.5</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -1361,6 +1362,7 @@ function renderRep(){
     <div class="f"><label>Min sales (${pct(RULES.thr,0)})</label><div class="v tnum">${fmt(R.minReq)}</div></div>
     <div class="grow"></div>
     <div class="f"><label>Credited · avg/mo</label><div class="v tnum">${fmt(R.tgt)} · <span style="color:${onTrack?'var(--pos)':'var(--warn)'}">${pct(R.attain,0)}</span></div></div>
+    <div class="f"><label>Earned (total)</label><div class="v tnum">${f2(R.earned)}${R.accelEarned>0?` <span class="accel-chip">+${f2(R.accelEarned)} 🚀</span>`:""}</div></div>
     <div class="f"><label>Eligible (total)</label><div class="v tnum" style="color:var(--pos)">${f2(R.eligible)}</div></div>
     <div class="f"><label>Outstanding payout</label><div class="v tnum" style="color:${outPay>0?'var(--pend)':'var(--pos)'}">${f2(outPay)}</div></div>
     <div class="repacts">
@@ -1436,7 +1438,9 @@ function renderRep(){
     <div class="paysum"><span>Paid out: <b class="tot-paid">AED ${f2(paidSum)}</b></span><span>Outstanding to pay: <b class="tot-out">AED ${f2(outSum)}</b></span></div></div>` : "";
   $("monthlyBox").querySelectorAll(".paypill").forEach(p=>p.addEventListener("click",e=>{ e.stopPropagation(); togglePayout(r,p.dataset.pm); renderRep(); }));
   $("monthlyBox").querySelectorAll("tr.mrow").forEach(tr=>tr.addEventListener("click",()=>{ monthFilter = (monthFilter===tr.dataset.m? "" : tr.dataset.m); renderRep(); }));
-  $("accelBox").innerHTML="";
+  $("accelBox").innerHTML = R.accelEarned>0
+    ? `<div class="accel on">🚀 <b>Accelerator unlocked</b> — ${r.name} exceeded target in ${R.months.filter(mo=>mo.R.accelEarned>0).length} month(s). Bonus on the excess above 100%: <b>${f2(R.accelEarned)} AED earned</b>, <b>${f2(R.accelElig)} AED eligible</b> after collection. Eligible fills in as deals are collected.</div>`
+    : "";
 }
 function planEditor(d,i){
   const total=(d.plan||[]).reduce((a,p)=>a+(p.pct||0),0);
