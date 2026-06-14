@@ -289,6 +289,19 @@
   .collauto{font-family:"JetBrains Mono";font-size:11.5px;color:var(--pend);font-weight:600}
   .collab-tag{font-size:10px;color:var(--blue);margin-top:3px;font-weight:600;max-width:160px}
   .accel-chip{font-size:11px;color:var(--pos);font-weight:700;background:var(--pos-soft);border-radius:6px;padding:1px 6px;margin-left:4px}
+  .coll-wrap{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+  .coll-done-l{font-size:10px;color:var(--muted);display:flex;gap:4px;align-items:center;cursor:pointer;white-space:nowrap}
+  .proc-badge{font-size:9px;font-weight:700;color:var(--pos);background:var(--pos-soft);border-radius:4px;padding:1px 5px}
+  .exec .blkhead{flex-wrap:wrap;gap:10px}
+  .exfilter{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .expanel{padding:6px 18px 18px;display:flex;flex-direction:column;gap:14px}
+  .exgroup .exg-t{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px}
+  .exrow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media (max-width:760px){.exrow{grid-template-columns:repeat(2,1fr)}}
+  .exkpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .exk-l{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px}
+  .exk-v{font-family:"JetBrains Mono";font-size:20px;font-weight:700;color:var(--ink)}
+  .exk-v.pos{color:var(--pos)}.exk-v.pend{color:var(--pend)}
   .planbtn{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;color:var(--muted)}
   .planbtn.on{background:var(--pend-soft);border-color:var(--pend);color:var(--pend)}
   .del{cursor:pointer;color:#B7C0CE;border:0;background:none;font-size:16px;padding:2px 6px}
@@ -532,13 +545,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.7.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.8.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.7.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.8.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -633,6 +646,14 @@
 </div>
   <div id="tab-commission" class="tabpanel">
   <div class="wrap">
+
+    <!-- EXECUTIVE DASHBOARD -->
+    <section class="blk exec">
+      <div class="blkhead"><h2>Executive dashboard</h2><span class="why">— commission &amp; referral payments at a glance, to date.</span>
+        <div class="exfilter" id="execFilter" style="margin-left:auto"></div>
+      </div>
+      <div id="execKpis" class="expanel"></div>
+    </section>
 
     <!-- RULES -->
     <section class="blk">
@@ -748,7 +769,7 @@
         </span>
       </div>
       <div class="panel scroll">
-        <table class="data"><thead><tr><th class="l">Customer</th><th>Gross (AED)</th><th>Excl VAT</th><th>Rate %</th><th>Commission</th><th>Collected %</th><th>Eligible</th><th class="l">Closed</th><th></th></tr></thead>
+        <table class="data"><thead><tr><th class="l">Customer</th><th>Gross (AED)</th><th>Excl VAT</th><th>Rate %</th><th>Commission</th><th>Collected %</th><th>Eligible</th><th class="l">Closed</th><th>Paid</th><th></th></tr></thead>
           <tbody id="refBody"></tbody><tfoot id="refFoot"></tfoot></table>
         <div class="toolrow" style="padding:12px 18px 16px"><button class="btn primary" id="addRef">+ Add referral</button></div>
       </div>
@@ -1233,7 +1254,7 @@ const BASE_REPS = [
   {name:"Wafiq",target:945000,deals:[]},
   {name:"Jawdat",target:498000,deals:[]},
 ];
-const BASE_REFS = [{cust:"Mohammad Sharafi",gross:49221.18,coll:1,month:"Jan/26"}];
+const BASE_REFS = [{cust:"Mohammad Sharafi",gross:49221.18,coll:1,month:"Jan/26",paid:false}];
 
 let RULES=structuredClone(BASE_RULES), MATRIX=structuredClone(BASE_MATRIX), REPS=structuredClone(BASE_REPS), REFS=structuredClone(BASE_REFS), sel=0;
 let monthFilter="";
@@ -1404,7 +1425,7 @@ function renderRep(){
     const planActive=d.future&&d.plan&&d.plan.length;
     const collCell = planActive
       ? `<span class="collauto" title="from payment plan">${pct(c.coll,0)} auto</span>`
-      : `<input class="d-in coll" data-k="coll" type="number" step="0.05" value="${d.coll}">`;
+      : `<div class="coll-wrap"><input class="d-in coll" data-k="coll" type="number" step="0.05" value="${d.coll}"><label class="coll-done-l"><input type="checkbox" class="coll-done" ${(+d.coll>=1)?'checked':''}> collected</label>${(+d.coll>=1)?'<span class="proc-badge">✓ processed</span>':''}</div>`;
     body+=`<tr data-i="${i}">
       <td class="l"><select class="d-sel" data-k="type"><option ${d.type==='B2C'?'selected':''}>B2C</option><option ${d.type==='B2B'?'selected':''}>B2B</option></select></td>
       <td class="l"><input class="d-in cust" data-k="cust" value="${d.cust}">${d.collab&&d.collab.length?`<div class="collab-tag" title="HubSpot collaborators">+ ${d.collab.join(", ")}</div>`:""}</td>
@@ -1476,6 +1497,10 @@ function bindDeals(r){
       renderRep(); renderSummary(); publishStore();
     });
   });
+  $("dealsBody").querySelectorAll(".coll-done").forEach(cb=>cb.addEventListener("change",e=>{
+    const tr=e.target.closest("tr[data-i]"); const i=+tr.dataset.i,d=r.deals[i];
+    d.coll=e.target.checked?1:0; renderRep(); renderSummary(); publishStore();
+  }));
   $("dealsBody").querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",e=>{
     const i=+e.target.dataset.plan; if(plansOpen.has(i))plansOpen.delete(i);else plansOpen.add(i); renderRep();
   }));
@@ -1505,16 +1530,20 @@ function renderRefs(){
       <td class="d-der">${pct(RULES.ref)}</td><td class="d-der">${f2(comm)}</td>
       <td><input class="d-in coll" data-k="coll" type="number" step="0.05" value="${r.coll}"></td>
       <td class="d-der elig">${f2(elig)}</td><td class="l"><input class="d-in month" data-k="month" value="${r.month||''}"></td>
+      <td style="text-align:center"><input type="checkbox" class="ref-paid" ${r.paid?'checked':''}></td>
       <td><button class="del" data-i="${i}">×</button></td></tr>`;
   });
-  $("refBody").innerHTML=body||`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No referrals.</td></tr>`;
-  $("refFoot").innerHTML=REFS.length?`<tr><td class="l">Totals</td><td></td><td>${fmt(tot.ex)}</td><td></td><td>${f2(tot.comm)}</td><td></td><td style="color:var(--pos)">${f2(tot.elig)}</td><td></td><td></td></tr>`:"";
+  $("refBody").innerHTML=body||`<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No referrals.</td></tr>`;
+  $("refFoot").innerHTML=REFS.length?`<tr><td class="l">Totals</td><td></td><td>${fmt(tot.ex)}</td><td></td><td>${f2(tot.comm)}</td><td></td><td class="tot-pos">${f2(tot.elig)}</td><td></td><td></td><td></td></tr>`:"";
   $("refBody").querySelectorAll("[data-k]").forEach(el=>el.addEventListener("change",e=>{
     const i=+e.target.closest("tr").dataset.i,k=e.target.dataset.k;
     if(k==="cust"||k==="month")REFS[i][k]=e.target.value; else REFS[i][k]=parseFloat(e.target.value)||0;
-    renderRefs();renderSummary();
+    renderRefs();renderSummary();renderExec();
   }));
-  $("refBody").querySelectorAll(".del").forEach(b=>b.addEventListener("click",e=>{REFS.splice(+e.target.dataset.i,1);renderRefs();renderSummary();}));
+  $("refBody").querySelectorAll(".ref-paid").forEach(cb=>cb.addEventListener("change",e=>{
+    REFS[+e.target.closest("tr").dataset.i].paid=e.target.checked; renderRefs();renderExec();
+  }));
+  $("refBody").querySelectorAll(".del").forEach(b=>b.addEventListener("click",e=>{REFS.splice(+e.target.dataset.i,1);renderRefs();renderSummary();renderExec();}));
 }
 
 function publishStore(){
@@ -1523,7 +1552,25 @@ function publishStore(){
   window.CoreVStore={deals,ts:Date.now()}; window.dispatchEvent(new CustomEvent('corev:store'));
   if(window.CoreVSync) window.CoreVSync.changed();
 }
-function renderAll(){ renderMatrix(); renderSummary(); renderTabs(); renderRep(); renderRefs(); publishStore(); }
+let execMonth="";
+function execMonths(){ const s=new Set(); REPS.forEach(r=>r.deals.forEach(d=>s.add(d.month||"—"))); REFS.forEach(r=>s.add(r.month||"—")); return [...s].sort((a,b)=>monthSortKey(a).localeCompare(monthSortKey(b))); }
+function renderExec(){
+  const months=execMonths();
+  const pill=(v,l,a)=>`<div class="mpill ${a?'active':''}" data-em="${v}">${l}</div>`;
+  if($("execFilter")) $("execFilter").innerHTML=`<span class="mfl">Month</span>`+pill("","All",execMonth==="")+months.map(m=>pill(m,m==="—"?"Unscheduled":m,execMonth===m)).join("");
+  if($("execFilter")) $("execFilter").querySelectorAll(".mpill").forEach(p=>p.addEventListener("click",()=>{ execMonth=p.dataset.em; renderExec(); }));
+  let cClosed=0,cElig=0,cPaid=0,cPend=0;
+  REPS.forEach(r=>repMonths(r).forEach(mo=>{ if(execMonth&&mo.month!==execMonth)return; const M=mo.R;
+    cClosed+=M.earned; cElig+=M.eligible; cPend+=M.pending; if(payoutPaid(r,mo.month))cPaid+=M.eligible; }));
+  let rClosed=0,rElig=0,rPaid=0,rPend=0;
+  REFS.forEach(r=>{ if(execMonth&&(r.month||"—")!==execMonth)return; const ex=r.gross*(1-RULES.vat),comm=ex*RULES.ref,elig=comm*(r.coll||0);
+    rClosed+=comm; rElig+=elig; rPend+=comm-elig; if(r.paid)rPaid+=elig; });
+  const card=(l,v,cls,sub)=>`<div class="exkpi"><div class="exk-l">${l}</div><div class="exk-v ${cls||''}">${f2(v)}</div>${sub?`<div class="exk-s">${sub}</div>`:""}</div>`;
+  const grp=(t,a,b,c,d)=>`<div class="exgroup"><div class="exg-t">${t}</div><div class="exrow">`+
+    card("Closed (earned)",a)+card("Eligible (collected)",b,"pos")+card("Paid out",c,"pos")+card("Pending (uncollected)",d,"pend")+`</div></div>`;
+  if($("execKpis")) $("execKpis").innerHTML = grp("Commission",cClosed,cElig,cPaid,cPend)+grp("Referrals",rClosed,rElig,rPaid,rPend);
+}
+function renderAll(){ renderExec(); renderMatrix(); renderSummary(); renderTabs(); renderRep(); renderRefs(); publishStore(); }
 
 /* ---------- HubSpot ---------- */
 function monthFromISO(s){ if(!s)return""; const d=new Date(s); if(isNaN(d))return""; return MON[d.getMonth()]+"/"+String(d.getFullYear()).slice(2); }
