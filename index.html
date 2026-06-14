@@ -200,6 +200,13 @@
   .barpct{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--muted);margin-top:4px;white-space:nowrap}
   .dealgive{margin:16px 0 2px;background:var(--input-soft);border:1px solid #CFE0FF;color:var(--ink);border-radius:10px;padding:11px 14px;font-size:12.5px;line-height:1.5}
   .seg-channel{background:#8A6FE8}
+  .perfhead{display:flex;align-items:baseline;gap:10px;margin:26px 0 12px;flex-wrap:wrap}
+  .perfhead h3{font-family:"Space Grotesk";font-size:16px;margin:0;color:var(--ink);font-weight:600}
+  .perf-elig{font-size:11px;font-weight:700;border-radius:6px;padding:3px 9px}
+  .perf-elig.ok{background:var(--pos-soft);color:var(--pos)}
+  .perf-elig.no{background:var(--warn-soft);color:var(--warn)}
+  .demo-disc{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:600}
+  .demo-disc input{width:64px;font-family:"JetBrains Mono";border:1px solid var(--line);border-radius:7px;padding:6px 8px;color:var(--input);font-weight:600;text-align:right}
 
 
   :root{
@@ -560,13 +567,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.13.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.14.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.13.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.14.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -792,6 +799,22 @@
         <span class="ic">i</span>
         <span>The dealer (OxePartner) channel adds a <b>tier-based dealer margin</b> (Bronze 10% · Silver 12.5% · Gold 15% · Premium 20%) plus a <b>dealer sales commission</b>, both on net revenue. CoreV's own cost stack here is granular: <b>ISR 0.5%</b> (capped at the ISR cap, B2C onboarding), <b>B2B 1%</b> (commercial only, on net+VAT), <b>base referral 2.5%</b> and <b>operational 5%</b>. OxeFit cost reflects the <b>4% contribution</b>. Selling price and products come from the catalog; discounts here are dealer-specific.</span>
       </div>
+
+      <div class="perfhead"><h3>Performance &amp; incentives</h3><span class="why">— Bronze, Silver &amp; Gold only (Premium not eligible). Revenue basis assumes Consumer PEAK net revenue.</span><span id="dgPerfElig" class="perf-elig"></span></div>
+      <section class="tablecard">
+        <div class="scroll">
+          <table>
+            <thead><tr><th class="l">Milestone</th><th>Units</th><th>Bonus (AED)</th><th>Revenue basis (AED)</th><th>Internal %</th><th class="l">Notes</th></tr></thead>
+            <tbody id="dgperf"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="perfhead"><h3>Demo unit proposal</h3><span class="why">— PEAK-PLUS Commercial + OxeLEAD demo bundle.</span>
+        <span class="demo-disc"><label>Demo discount</label><input id="dg_demodisc" type="number" step="1"> %</span>
+      </div>
+      <section class="kpis" id="dgdemo"></section>
+      <div class="note"><span class="ic">i</span><span>Demo (showroom) units are offered as a <b>PEAK-PLUS Commercial + OxeLEAD</b> bundle at the demo discount. Cost is the OxeFit hardware cost (no contribution); the proposal shows the resulting profit and margin to support the demo-unit decision.</span></div>
     </div><!-- /cost-dealer -->
 
   </div>
@@ -1573,7 +1596,7 @@ const DEALER_TIERS = [
   ["Gold (25+ units)", 0.15],
   ["Premium (25+ units)", 0.20],
 ];
-let DG = { tier:"Premium (25+ units)", comm:0.02, isr:0.005, isrCap:500, b2b:0.01, ref:0.025, ops:0.05, contrib:0.04, disc:{} };
+let DG = { tier:"Premium (25+ units)", comm:0.02, isr:0.005, isrCap:500, b2b:0.01, ref:0.025, ops:0.05, contrib:0.04, demoDisc:0.25, disc:{} };
 function dealerMarginPct(){ const t=DEALER_TIERS.find(x=>x[0]===DG.tier); return t?t[1]:0.2; }
 
 function dealerCalc(r, commercial){
@@ -1659,6 +1682,45 @@ function renderDealer(){
   $("dgbody").querySelectorAll(".dg-disc").forEach(inp=>inp.addEventListener("change",e=>{
     const sku=e.target.closest("tr").dataset.dsku; DG.disc[sku]=parseFloat(e.target.value)||0; renderDealer(); dgChanged();
   }));
+  renderDealerPerf();
+}
+function renderDealerPerf(){
+  if(!$("dgperf")) return;
+  const peakRow=findCatalog("MENA-XS1-PEAK-XFIT-12MO");
+  const peakNet = peakRow ? dealerCalc(peakRow,false).netRev : 0;
+  const bonuses=[
+    ["Launch bonus — first 3 units (Q1)",3,2500,"One-time, 1st 3 units sold in Q1"],
+    ["Bronze → Silver (by Q3)",10,10000,"Hit 10 units"],
+    ["Silver → Gold (by Q3)",25,20000,"Hit 25 units"],
+    ["Gold +30%",33,30000,"Hit 33 units (25 ×1.3)"],
+  ];
+  $("dgperf").innerHTML=bonuses.map(b=>{ const basis=b[1]*peakNet, p=basis?b[2]/basis:0;
+    return `<tr><td class="l">${b[0]}</td><td class="derived">${b[1]}</td><td class="derived">${fmt(b[2])}</td><td class="derived">${fmt(basis)}</td><td class="derived">${pct(p)}</td><td class="l" style="color:var(--muted)">${b[3]}</td></tr>`;
+  }).join("");
+  const eligible = DG.tier!=="Premium (25+ units)";
+  const el=$("dgPerfElig"); if(el){ el.className="perf-elig "+(eligible?"ok":"no"); el.textContent = eligible ? ("Eligible · "+DG.tier) : "Not eligible · Premium"; }
+
+  const pp=findCatalog("MENA-XS1-PEAK-PLUS-APEX-36MO"), ol=findCatalog("MENA-MEM-XLEAD-2500-SESS");
+  const dInput=$("dg_demodisc");
+  if(dInput && !dInput.dataset.bound){ dInput.dataset.bound="1"; dInput.addEventListener("input",e=>{ DG.demoDisc=(parseFloat(e.target.value)||0)/100; renderDealerPerf(); dgChanged(); }); }
+  if(dInput) dInput.value=+(((DG.demoDisc||0)*100).toFixed(0));
+  const demoEl=$("dgdemo");
+  if(demoEl){
+    if(pp&&ol){
+      const sell=r=>r.msrp*G.exch*(1+G.markup[r.mk]);
+      const total=sell(pp)+sell(ol), cost=(pp.cost+ol.cost)*G.exch;
+      const disc=total*(DG.demoDisc||0), fin=total-disc, profit=fin-cost, margin=fin?profit/fin:0;
+      const cards=[
+        ["Bundle list price",fmt(total),"PEAK-PLUS Comm + OxeLEAD"],
+        ["Demo discount",pct(DG.demoDisc||0),"− "+fmt(disc)+" AED"],
+        ["Final price (excl VAT)",fmt(fin),"offer to dealer"],
+        ["Bundle cost",fmt(cost),"OxeFit hardware"],
+        ["Profit",fmt(profit),"after demo discount"],
+        ["Margin",pct(margin),"on final price"],
+      ];
+      demoEl.innerHTML=cards.map(c=>`<div class="kpi"><div class="lbl">${c[0]}</div><div class="val tnum">${c[1]}</div><div class="meta">${c[2]}</div></div>`).join("");
+    } else { demoEl.innerHTML=`<div class="kpi"><div class="meta">Demo bundle products not found in catalog.</div></div>`; }
+  }
 }
 function dgChanged(){ if(window.CoreVSync) window.CoreVSync.changed(); }
 
