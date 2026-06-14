@@ -513,6 +513,12 @@
   .rm-filters .ff label{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:5px}
   .rm-filters select{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:8px 10px;font-family:"Inter";font-size:13px;font-weight:600;color:var(--ink);outline:none;min-width:150px}
   .rm-filters select:focus{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .rm-bymonth{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:-6px 0 20px}
+  .rm-bymonth .bm-title{width:100%;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:1px}
+  .bm-chip{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:13px;color:var(--text);font-family:"JetBrains Mono";font-weight:600}
+  .bm-chip b{color:var(--ink);font-weight:700;margin-right:6px;font-family:"Space Grotesk"}
+  .bm-chip.over{border-color:var(--warn);background:var(--warn-soft)}
+  .bm-chip.over b{color:var(--warn)}
   .ctrls .grow{flex:1}
   .synced{font-size:12px;color:var(--muted)}
   .synced b{color:var(--text)}
@@ -624,13 +630,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.21.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.22.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.21.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.22.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -1037,6 +1043,7 @@
     <section class="blk">
       <div class="blkhead"><h2>Dashboard</h2></div>
       <div class="rm-kpis" id="rm-kpis"></div>
+      <div class="rm-bymonth" id="rm-recvMonths"></div>
       <div class="panel tl">
         <h3>Cash timeline — next 90 days</h3>
         <p class="sub">Outstanding payments by due date. Receivables in above the line, payables out below. Overdue items pinned left.</p>
@@ -1080,11 +1087,10 @@
 
       <div class="panel pad">
         <div class="ctrls">
-          <div class="f"><label>OxeFit cost basis</label><input id="rm_oxeratio" type="number" step="1"><span style="font-size:11px;color:var(--muted);margin-left:4px">% of deal</span></div>
           <div class="grow"></div>
           <div class="oxe-tot" id="rm-oxeTot" style="text-align:right"></div>
         </div>
-        <div class="ms-hint">OxeFit owes follow each client deal <b>back-to-back</b>: same milestone schedule &amp; dates, settled as the client collects. The amount is OxeFit's <b>actual cost from the Costing catalog</b> — tap <b>🖥 Devices</b> on a deal to set its device type(s) &amp; quantity. Deals without devices fall back to this basis % (or a manual amount).</div>
+        <div class="ms-hint">OxeFit owes follow each client deal <b>back-to-back</b>: same milestone schedule &amp; dates, settled as the client collects. The amount is OxeFit's <b>actual cost from the Costing catalog</b> — tap <b>🖥 Devices</b> on a deal to set its device type(s) &amp; quantity. You can also type a cost manually for any deal.</div>
       </div>
 
       <div class="panel scroll" style="margin-top:12px">
@@ -1146,7 +1152,7 @@
         <button class="btn ghost" id="rm-oxeAddRow">+ Add device</button>
         <span class="oxe-tot" id="rm-oxeModalTotal"></span>
         <span style="flex:1"></span>
-        <button class="btn" id="rm-oxeClearDev">Use basis %</button>
+        <button class="btn" id="rm-oxeClearDev">Clear devices</button>
         <button class="btn" id="rm-oxeCancel">Cancel</button>
         <button class="btn primary" id="rm-oxeSave">Save devices</button>
       </div>
@@ -2590,6 +2596,7 @@ function rowStatusPass(r){ return !FILTER.status || statusOf(r.due,r.paid)===FIL
 function anyFilter(){ return !!(FILTER.cust||FILTER.month||FILTER.status); }
 function oxeProducts(){ return window.CoreVProducts||[]; }
 function oxeUnitCost(sku){ const p=oxeProducts().find(x=>x.sku===sku); return p?(+p.oxeUnit||0):0; }
+function oxeName(sku){ const p=oxeProducts().find(x=>x.sku===sku); return p?p.name:sku; }
 function dealKey(d){ return d.hsId ? ("hs:"+d.hsId) : ("m:"+(d.rep||"")+"|"+(d.customer||"")+"|"+(d.month||"")); }
 function dealMs(d){ const c=CTRL.perDeal&&CTRL.perDeal[dealKey(d)]; return (Array.isArray(c)&&c.length)?c:(CTRL.def||defaultDef()); }
 let PAY=[
@@ -2620,10 +2627,9 @@ function oxeCostOf(d){
   const items=oxeItemsOf(d);
   if(items&&items.length) return items.reduce((a,it)=>a+oxeUnitCost(it.sku)*((+it.qty)||0),0);  // actual cost from costing catalog × qty
   const k=dealKey(d); const ov=CTRL.oxeOv&&CTRL.oxeOv[k];
-  if(ov!=null) return ov;                                                                         // manual override
-  return d.gross*(CTRL.oxeRatio||0);                                                              // fallback: basis %
+  return (ov!=null)?ov:0;                                                                         // manual amount, else 0 until devices chosen
 }
-function oxeCostSource(d){ const it=oxeItemsOf(d); if(it&&it.length) return "devices"; const ov=CTRL.oxeOv&&CTRL.oxeOv[dealKey(d)]; if(ov!=null) return "manual"; return "basis"; }
+function oxeCostSource(d){ const it=oxeItemsOf(d); if(it&&it.length) return "devices"; const ov=CTRL.oxeOv&&CTRL.oxeOv[dealKey(d)]; return (ov!=null)?"manual":"none"; }
 function oxefitGroups(){
   const store=(window.CoreVStore&&window.CoreVStore.deals)||[];
   return store.filter(d=>d.gross).map(d=>{
@@ -2670,6 +2676,16 @@ function renderDashboard(){
     {l:"Overdue total",v:fmt(overR+overP),m:"in "+fmt(overR)+" · out "+fmt(overP),c:overR+overP>0?"neg":""},
   ].map(k=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val tnum">${k.v}</div><div class="meta">${k.m}</div></div>`).join("");
   ROOT.querySelectorAll("#rm-kpis .kpi").forEach(k=>{k.classList.remove("flash");void k.offsetWidth;k.classList.add("flash");});
+
+  // expected receivables grouped by due month
+  const mMap={};
+  recvOut.forEach(r=>{ const d=r.due, key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+    (mMap[key]=mMap[key]||{lbl:MONTHS[d.getMonth()]+" "+d.getFullYear(),amt:0,over:false}).amt+=r.amount;
+    if(statusOf(d,false)==="over") mMap[key].over=true; });
+  const mArr=Object.keys(mMap).sort().map(k=>mMap[k]);
+  $("rm-recvMonths").innerHTML = mArr.length
+    ? `<div class="bm-title">Expected receivables by month</div>`+mArr.map(m=>`<span class="bm-chip ${m.over?'over':''}"><b>${m.lbl}</b> ${fmt(m.amt)}</span>`).join("")
+    : "";
 
   renderTimeline(recvOut, payOut);
   renderFlags(recvOut, payOut);
@@ -2772,9 +2788,9 @@ function renderOxe(){
     const costCell = (src==="devices")
       ? `<span class="oxe-derived">${fmt(g.cost)}</span>`
       : `<input class="rm-in oxe-cost" type="number" data-dk="${encodeURIComponent(g.key)}" value="${Math.round(g.cost)}" title="OxeFit cost for this deal">`;
-    const srcNote = src==="devices" ? `from ${items.reduce((a,i)=>a+((+i.qty)||0),0)} device unit(s) · costing catalog`
-                  : src==="manual" ? `manual override`
-                  : `default ${Math.round((CTRL.oxeRatio||0)*100)}% of deal`;
+    const srcNote = src==="devices" ? items.map(it=>`${oxeName(it.sku)} ×${(+it.qty)||0}`).join(" · ")
+                  : src==="manual" ? `manual cost entry`
+                  : `tap 🖥 Devices to set the device type & cost`;
     body+=`<tr class="deal-grp" data-dk="${encodeURIComponent(g.key)}">
       <td class="l"><span class="dg-cust">${d.customer||"—"}</span> <span class="dg-meta">${d.rep||""}${d.month?" · "+d.month:""} · client ${fmt(d.gross)}</span></td>
       <td class="l"><span class="sched-chip custom">back-to-back</span></td>
@@ -2982,8 +2998,6 @@ $("rm-msSave").addEventListener("click",()=>{
 });
 $("rm_soon").value=CTRL.soon;
 $("rm_soon").addEventListener("input",e=>{CTRL.soon=parseInt(e.target.value)||0;renderAll();rmChanged();});
-$("rm_oxeratio").value=Math.round((CTRL.oxeRatio||0)*100);
-$("rm_oxeratio").addEventListener("input",e=>{CTRL.oxeRatio=(parseFloat(e.target.value)||0)/100;renderOxe();renderDashboard();rmChanged();});
 $("rm-oxeAddRow").addEventListener("click",()=>{ oxeEditWork.push({sku:"",qty:1}); renderOxeModalBody(); });
 $("rm-oxeClose").addEventListener("click",closeOxeModal);
 $("rm-oxeCancel").addEventListener("click",closeOxeModal);
@@ -3020,7 +3034,6 @@ if(window.CoreVSync) window.CoreVSync.register('reminders',
     if(!CTRL.oxeOv) CTRL.oxeOv={};
     if(!CTRL.oxeItems) CTRL.oxeItems={};
     $("rm_soon").value=CTRL.soon;
-    $("rm_oxeratio").value=Math.round((CTRL.oxeRatio||0)*100);
     renderAll();
   }catch(_){} });
 
