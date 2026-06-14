@@ -201,15 +201,15 @@
   .dealgive{margin:16px 0 2px;background:var(--input-soft);border:1px solid #CFE0FF;color:var(--ink);border-radius:10px;padding:11px 14px;font-size:12.5px;line-height:1.5}
   .seg-channel{background:#8A6FE8}
   .dgkpis{display:flex;gap:14px;margin-bottom:24px;align-items:stretch;flex-wrap:wrap}
-  .dgkpi-grid{flex:1 1 420px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .dgkpi-hero{flex:1 1 260px;background:linear-gradient(135deg,#1C4ED8 0%,#3B5BDB 100%);border:0;color:#fff;
+  .dgkpis .dgkpi-grid{flex:1 1 420px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .dgkpis .dgkpi-hero{flex:1 1 260px;background:linear-gradient(135deg,#1C4ED8 0%,#3B5BDB 100%)!important;border:0;color:#fff;
     display:flex;flex-direction:column;justify-content:center;box-shadow:0 10px 26px -10px rgba(28,78,216,.55)}
-  .dgkpi-hero::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.10)}
-  .dgkpi-hero .lbl{color:rgba(255,255,255,.82)}
-  .dgkpi-hero .val{font-size:46px;color:#fff;margin-top:8px;line-height:1}
-  .dgkpi-hero .meta{color:rgba(255,255,255,.8);font-size:12.5px;margin-top:8px}
-  @media (max-width:760px){.dgkpi-grid{flex-basis:100%}.dgkpi-hero{flex-basis:100%}}
-  @media (max-width:430px){.dgkpi-grid{grid-template-columns:1fr}}
+  .dgkpis .dgkpi-hero::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.10)}
+  .dgkpis .dgkpi-hero .lbl{color:rgba(255,255,255,.82)}
+  .dgkpis .dgkpi-hero .val{font-size:46px;color:#fff;margin-top:8px;line-height:1}
+  .dgkpis .dgkpi-hero .meta{color:rgba(255,255,255,.8);font-size:12.5px;margin-top:8px}
+  @media (max-width:760px){.dgkpis .dgkpi-grid{flex-basis:100%}.dgkpis .dgkpi-hero{flex-basis:100%}}
+  @media (max-width:430px){.dgkpis .dgkpi-grid{grid-template-columns:1fr}}
   .perfhead{display:flex;align-items:baseline;gap:10px;margin:26px 0 12px;flex-wrap:wrap}
   .perfhead h3{font-family:"Space Grotesk";font-size:16px;margin:0;color:var(--ink);font-weight:600}
   .perf-elig{font-size:11px;font-weight:700;border-radius:6px;padding:3px 9px}
@@ -577,13 +577,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.15.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.15.1 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.15.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.15.1</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
