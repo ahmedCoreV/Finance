@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CoreV · Finance Suite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<script>if(typeof msal==='undefined'){document.write('<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/msal-browser/2.38.3/msal-browser.min.js"><\/scr'+'ipt>');}</script>
+<style>
+
+  :root{
+    --ink:#0E1626;          /* deep slate */
+    --ink-2:#1B2638;
+    --surface:#F4F6F9;      /* workspace */
+    --card:#FFFFFF;
+    --line:#E2E6EE;         /* hairline */
+    --line-2:#EEF1F6;
+    --muted:#6B7688;
+    --text:#0E1626;
+    --input:#1C4ED8;        /* financial-model blue = editable input */
+    --input-soft:#EAF0FE;
+    --pos:#117A4E;          /* net profit / good */
+    --pos-soft:#E2F3EA;
+    --oxe:#2B3A55;          /* oxefit cost segment */
+    --corev:#C99A2E;        /* corev cost segment (commission/ops) */
+    --warn:#C0492B;         /* thin margin */
+    --warn-soft:#F8E7E1;
+    --accent:#3B5BDB;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(14,22,38,.06), 0 8px 24px rgba(14,22,38,.05);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--surface);color:var(--text);
+    font-family:"Inter",system-ui,sans-serif;font-size:14px;line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+  /* ---------- Header ---------- */
+  header.topbar{
+    background:var(--ink);color:#fff;padding:18px 28px;
+    display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+    position:sticky;top:0;z-index:50;
+  }
+  .brand{display:flex;align-items:baseline;gap:12px}
+  .brand .mark{
+    font-family:"Space Grotesk";font-weight:700;font-size:20px;letter-spacing:-.02em;
+  }
+  .brand .mark .v{color:#7FA0FF}
+  .brand .sub{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8FA0BC;font-weight:600}
+  .module-tag{
+    margin-left:auto;font-family:"JetBrains Mono";font-size:11px;letter-spacing:.08em;
+    color:#9FB0CC;border:1px solid #2C3A52;border-radius:999px;padding:5px 12px;
+  }
+  .module-tag b{color:#fff;font-weight:600}
+
+  .wrap{max-width:1320px;margin:0 auto;padding:24px 28px 64px}
+
+  /* ---------- Assumptions bar ---------- */
+  .assumptions{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:18px 20px;margin-bottom:22px;
+  }
+  .assumptions .head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .assumptions .head h2{
+    font-family:"Space Grotesk";font-size:14px;font-weight:600;margin:0;letter-spacing:-.01em;
+  }
+  .assumptions .head .why{font-size:12px;color:var(--muted)}
+  .agrid{
+    display:grid;grid-template-columns:repeat(6,1fr);gap:14px;
+  }
+  .field label{
+    display:block;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;margin-bottom:5px;
+  }
+  .field .inputwrap{
+    position:relative;display:flex;align-items:center;
+    border:1px solid var(--line);border-radius:8px;background:var(--input-soft);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .field .inputwrap:focus-within{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .field input{
+    width:100%;border:0;background:transparent;padding:9px 10px;
+    font-family:"JetBrains Mono";font-size:14px;font-weight:600;color:var(--input);
+    text-align:right;outline:none;
+  }
+  .field .affix{
+    padding:0 9px;color:#7E93C4;font-family:"JetBrains Mono";font-size:12px;font-weight:600;
+    border-left:1px solid #D5E0FA;align-self:stretch;display:flex;align-items:center;
+  }
+  .field .affix.pre{border-left:0;border-right:1px solid #D5E0FA}
+  .reset{
+    margin-top:14px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+    background:none;border:1px solid var(--line);border-radius:7px;padding:7px 13px;
+    font-family:"Inter";font-size:12.5px;font-weight:600;color:var(--muted);
+  }
+  .reset:hover{border-color:var(--muted);color:var(--text)}
+
+  /* ---------- KPI strip ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+  .kpi{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:15px 17px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  .kpi .lbl{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .kpi .val{font-family:"Space Grotesk";font-size:28px;font-weight:600;letter-spacing:-.02em;margin-top:6px}
+  .kpi .meta{font-size:12px;color:var(--muted);margin-top:3px}
+  .kpi.flash{animation:flash .6s ease}
+  @keyframes flash{0%{background:#FBFCEF}100%{background:var(--card)}}
+
+  /* ---------- Table ---------- */
+  .tablecard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:1080px}
+  thead th{
+    background:var(--ink);color:#C7D3E8;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+    font-weight:600;padding:12px 12px;text-align:right;white-space:nowrap;position:sticky;top:0;
+  }
+  thead th.l{text-align:left}
+  thead th .u{display:block;color:#7E8FAE;font-weight:500;font-size:9px;margin-top:2px;letter-spacing:.04em}
+  .grouprow td{
+    background:var(--ink-2);color:#fff;font-family:"Space Grotesk";font-weight:600;font-size:12px;
+    letter-spacing:.04em;text-transform:uppercase;padding:9px 12px;
+  }
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap}
+  tbody tr:hover td{background:#FAFBFD}
+  td.l{text-align:left}
+  .pname{font-weight:600;font-size:13px}
+  .psku{font-family:"JetBrains Mono";font-size:10.5px;color:var(--muted);margin-top:2px}
+  /* inline editable cell */
+  .cell-in{
+    width:84px;border:1px solid var(--line);background:var(--input-soft);border-radius:6px;
+    padding:6px 8px;font-family:"JetBrains Mono";font-size:12.5px;font-weight:600;color:var(--input);
+    text-align:right;outline:none;
+  }
+  .cell-in.wide{width:96px}
+  .cell-in.qty{width:54px}
+  .cell-in:focus{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .derived{font-family:"JetBrains Mono";font-size:12.5px}
+  .net{font-weight:700}
+  .pct{font-family:"JetBrains Mono";font-size:12px;font-weight:600}
+  .pct.good{color:var(--pos)}
+  .pct.thin{color:var(--warn)}
+  /* profitability bar */
+  .barcell{width:150px}
+  .bar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--line-2);width:140px;margin-left:auto}
+  .bar span{display:block;height:100%}
+  .seg-oxe{background:var(--oxe)}
+  .seg-corev{background:var(--corev)}
+  .seg-net{background:var(--pos)}
+  .subtotal td{background:#F3F6FB;font-weight:700;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .subtotal td.l{font-family:"Space Grotesk"}
+  tfoot td{background:var(--ink);color:#fff;padding:14px 12px;text-align:right;font-weight:700}
+  tfoot td.l{text-align:left;font-family:"Space Grotesk";letter-spacing:.02em}
+  tfoot .tnum{color:#fff}
+
+  /* legend + notes */
+  .legend{display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:13px 16px;border-top:1px solid var(--line-2);font-size:11.5px;color:var(--muted)}
+  .legend .k{display:inline-flex;align-items:center;gap:6px}
+  .legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .note{
+    margin-top:18px;background:#FFF;border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:13px 16px;font-size:12.5px;color:#41506A;display:flex;gap:10px;
+  }
+  .note b{color:var(--text)}
+  .note .ic{color:var(--accent);font-weight:700;font-family:"JetBrains Mono"}
+
+  @media (max-width:980px){
+    .agrid{grid-template-columns:repeat(3,1fr)}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+  }
+  @media (max-width:560px){
+    .wrap{padding:16px}
+    header.topbar{padding:14px 16px}
+    .agrid{grid-template-columns:repeat(2,1fr)}
+    .module-tag{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+
+
+  :root{
+    --ink:#0E1626; --ink-2:#1B2638; --surface:#F4F6F9; --card:#FFFFFF;
+    --line:#E2E6EE; --line-2:#EEF1F6; --muted:#6B7688; --text:#0E1626;
+    --input:#1C4ED8; --input-soft:#EAF0FE;
+    --pos:#117A4E; --pos-soft:#E2F3EA; --pend:#B5760A; --pend-soft:#FBF1DC;
+    --b2c:#3B5BDB; --b2b:#7A4FB5; --warn:#C0492B; --accent:#3B5BDB; --hub:#FF7A59;
+    --radius:10px; --shadow:0 1px 2px rgba(14,22,38,.06), 0 8px 24px rgba(14,22,38,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface);color:var(--text);font-family:"Inter",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+  header.topbar{background:var(--ink);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;position:sticky;top:0;z-index:50}
+  .brand{display:flex;align-items:baseline;gap:12px}
+  .brand .mark{font-family:"Space Grotesk";font-weight:700;font-size:20px;letter-spacing:-.02em}
+  .brand .mark .v{color:#7FA0FF}
+  .brand .sub{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8FA0BC;font-weight:600}
+  .module-tag{margin-left:auto;font-family:"JetBrains Mono";font-size:11px;letter-spacing:.08em;color:#9FB0CC;border:1px solid #2C3A52;border-radius:999px;padding:5px 12px}
+  .module-tag b{color:#fff;font-weight:600}
+  .wrap{max-width:1340px;margin:0 auto;padding:24px 28px 64px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  section.blk{margin-bottom:22px}
+  .blkhead{display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap}
+  .blkhead h2{font-family:"Space Grotesk";font-size:15px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .blkhead .why{font-size:12px;color:var(--muted)}
+  .pad{padding:18px 20px}
+  .agrid{display:grid;grid-template-columns:repeat(7,1fr);gap:13px}
+  .field label{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .field .inputwrap{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--input-soft)}
+  .field .inputwrap:focus-within{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .field input{width:100%;border:0;background:transparent;padding:8px 9px;font-family:"JetBrains Mono";font-size:13.5px;font-weight:600;color:var(--input);text-align:right;outline:none}
+  .field .affix{padding:0 8px;color:#7E93C4;font-family:"JetBrains Mono";font-size:11px;font-weight:600;border-left:1px solid #D5E0FA;display:flex;align-items:center;align-self:stretch}
+  .btn{display:inline-flex;align-items:center;gap:7px;cursor:pointer;background:none;border:1px solid var(--line);border-radius:7px;padding:8px 14px;font-family:"Inter";font-size:12.5px;font-weight:600;color:var(--muted)}
+  .btn:hover{border-color:var(--muted);color:var(--text)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#2f4ec0}
+  .btn.hub{background:var(--hub);border-color:var(--hub);color:#fff}
+  .btn.hub:hover{filter:brightness(.95)}
+  .btn.danger{color:var(--warn);border-color:#EAD2CC}
+  .btn.danger:hover{background:var(--warn);color:#fff;border-color:var(--warn)}
+  .btn.sm{padding:6px 11px;font-size:12px}
+  .toolrow{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  table.matrix{width:100%;border-collapse:collapse;margin-top:4px}
+  table.matrix th{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:right;padding:6px 12px;border-bottom:1px solid var(--line)}
+  table.matrix th.l{text-align:left}
+  table.matrix td{padding:7px 12px;border-bottom:1px solid var(--line-2);text-align:right;font-family:"JetBrains Mono";font-size:12.5px}
+  table.matrix td.l{text-align:left;font-family:"Inter";font-weight:600}
+  .tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;font-family:"Inter"}
+  .tag.full{background:var(--pos-soft);color:var(--pos)}
+  .tag.tp{background:#EFE6FA;color:#6a3fb0}
+  .tag.half{background:#E7EEFB;color:#2a52c9}
+  .tag.team{background:#FBF1DC;color:var(--pend)}
+  .tag.na{background:#F1F0F3;color:#6B7688}
+  .mini{width:62px;border:1px solid var(--line);background:var(--input-soft);border-radius:6px;padding:5px 7px;font-family:"JetBrains Mono";font-size:12px;font-weight:600;color:var(--input);text-align:right;outline:none}
+  .mini:focus{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+  .kpi .lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .kpi .val{font-family:"Space Grotesk";font-size:25px;font-weight:600;letter-spacing:-.02em;margin-top:5px}
+  .kpi .meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .kpi.flash{animation:flash .6s ease}
+  @keyframes flash{0%{background:#FBFCEF}100%{background:var(--card)}}
+  .scroll{overflow-x:auto}
+  table.data{width:100%;border-collapse:collapse;min-width:760px}
+  table.data thead th{background:var(--ink);color:#C7D3E8;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;padding:11px 12px;text-align:right;white-space:nowrap}
+  table.data thead th.l{text-align:left}
+  table.data tbody td{padding:9px 12px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap;font-family:"JetBrains Mono";font-size:12.5px}
+  table.data tbody td.l{text-align:left;font-family:"Inter"}
+  table.data tbody tr.clickable{cursor:pointer}
+  table.data tbody tr.clickable:hover td{background:#F3F6FB}
+  table.data tbody tr.active td{background:#EAF0FE}
+  table.data tfoot td{background:var(--ink);color:#fff;padding:12px;text-align:right;font-weight:700;font-family:"JetBrains Mono"}
+  table.data tfoot td.l{text-align:left;font-family:"Space Grotesk"}
+  .nm{font-weight:600;font-family:"Inter"!important}
+  .att-pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;font-family:"Inter"}
+  .a-below{background:#FBEFE9;color:var(--warn)} .a-on{background:var(--pos-soft);color:var(--pos)} .a-min{background:#F1F0F3;color:#6B7688}
+  .reptabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+  .reptab{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 15px;font-size:13px;font-weight:600;color:var(--muted)}
+  .reptab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .reptab .t{font-family:"JetBrains Mono";font-size:10.5px;opacity:.7;margin-left:6px}
+  .repbar{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end;padding:14px 18px;border-bottom:1px solid var(--line-2)}
+  .repbar .f label{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px}
+  .repbar .f .v{font-family:"Space Grotesk";font-size:19px;font-weight:600}
+  .repbar .f input{width:120px;border:1px solid var(--line);background:var(--input-soft);border-radius:7px;padding:7px 9px;font-family:"JetBrains Mono";font-size:14px;font-weight:600;color:var(--input);text-align:right;outline:none}
+  .repbar .grow{flex:1}
+  .repacts{display:flex;gap:8px;flex-wrap:wrap}
+  table.deals{width:100%;border-collapse:collapse;min-width:1180px}
+  table.deals thead th{background:var(--ink-2);color:#C7D3E8;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;padding:10px;text-align:right;white-space:nowrap}
+  table.deals thead th.l{text-align:left}
+  table.deals tbody td{padding:8px 10px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap}
+  table.deals tbody td.l{text-align:left}
+  .d-in{width:96px;border:1px solid var(--line);background:var(--input-soft);border-radius:6px;padding:6px 8px;font-family:"JetBrains Mono";font-size:12px;font-weight:600;color:var(--input);text-align:right;outline:none}
+  .d-in.cust{width:120px;text-align:left;color:var(--text);font-family:"Inter"}
+  .d-in.month{width:74px;text-align:center;color:var(--text);font-family:"JetBrains Mono"}
+  .d-in.coll{width:64px}
+  .d-in:focus{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .d-sel{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 7px;font-family:"Inter";font-size:12px;font-weight:500;outline:none}
+  .d-der{font-family:"JetBrains Mono";font-size:12px}
+  .d-der.elig{font-weight:700;color:var(--pos)}
+  .d-der.pend{color:var(--pend)}
+  .collauto{font-family:"JetBrains Mono";font-size:11.5px;color:var(--pend);font-weight:600}
+  .planbtn{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;color:var(--muted)}
+  .planbtn.on{background:var(--pend-soft);border-color:var(--pend);color:var(--pend)}
+  .del{cursor:pointer;color:#B7C0CE;border:0;background:none;font-size:16px;padding:2px 6px}
+  .del:hover{color:var(--warn)}
+  table.deals tfoot td{background:#F3F6FB;font-weight:700;font-family:"JetBrains Mono";padding:10px;text-align:right;border-top:1px solid var(--line)}
+  table.deals tfoot td.l{text-align:left;font-family:"Space Grotesk"}
+  .planrow td{background:#FBFBFD;padding:0!important}
+  .planbox{padding:14px 18px;border-bottom:1px solid var(--line-2)}
+  .planbox h4{margin:0 0 8px;font-family:"Space Grotesk";font-size:12.5px;font-weight:600}
+  .plan-inst{display:flex;gap:10px;align-items:center;margin-bottom:7px;flex-wrap:wrap}
+  .plan-inst input[type=date]{border:1px solid var(--line);background:var(--input-soft);border-radius:6px;padding:5px 8px;font-family:"JetBrains Mono";font-size:12px;color:var(--input)}
+  .plan-inst input[type=number]{width:70px;border:1px solid var(--line);background:var(--input-soft);border-radius:6px;padding:5px 8px;font-family:"JetBrains Mono";font-size:12px;font-weight:600;color:var(--input);text-align:right}
+  .plan-inst .pamt{font-family:"JetBrains Mono";font-size:12px;color:var(--muted)}
+  .plan-sum{font-size:12px;color:var(--muted);margin-top:6px}
+  .plan-sum b{color:var(--text)}
+  .plan-sum .bad{color:var(--warn)}
+  .proj{margin:14px 18px;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .proj .ph{background:#F3F6FB;padding:9px 14px;font-family:"Space Grotesk";font-size:12.5px;font-weight:600;border-bottom:1px solid var(--line)}
+  .proj table{width:100%;border-collapse:collapse}
+  .proj td{padding:7px 14px;border-bottom:1px solid var(--line-2);font-family:"JetBrains Mono";font-size:12.5px}
+  .proj td.l{text-align:left;font-family:"Inter"} .proj td.r{text-align:right}
+  .accel{margin:14px 18px;border:1px dashed var(--line);border-radius:9px;padding:13px 16px;font-size:13px;background:#FBFCFE}
+  .accel.on{border-color:var(--pos);background:var(--pos-soft)}
+  .accel b{font-family:"Space Grotesk"}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:13px 18px;border-top:1px solid var(--line-2);font-size:11.5px;color:var(--muted)}
+  .legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+  .note{margin-top:18px;background:#FFF;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:13px 16px;font-size:12.5px;color:#41506A;display:flex;gap:10px}
+  .note b{color:var(--text)} .note .ic{color:var(--accent);font-weight:700;font-family:"JetBrains Mono"}
+  .hubgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .hub-status{font-size:12px;margin-top:8px;color:var(--muted)}
+  .hub-status.ok{color:var(--pos)} .hub-status.err{color:var(--warn)}
+  textarea.csv{width:100%;min-height:88px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-family:"JetBrains Mono";font-size:11.5px;resize:vertical;outline:none}
+  textarea.csv:focus{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .hub-in{width:100%;border:1px solid var(--line);background:var(--input-soft);border-radius:8px;padding:9px 11px;font-family:"JetBrains Mono";font-size:12.5px;color:var(--input);outline:none}
+  .hubrow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .hs-ownermap{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:8px;margin-top:12px}
+  .hs-ownerrow{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+  .hs-ownerrow span:first-child{min-width:78px}
+  .hs-ownerrow select{flex:1;min-width:0}
+  .hs-pre{background:#0d1117;color:#c9d1d9;border-radius:8px;padding:14px;font-size:11px;line-height:1.5;overflow-x:auto;margin:0;font-family:"JetBrains Mono",monospace}
+  @media (max-width:980px){.agrid{grid-template-columns:repeat(4,1fr)}.kpis{grid-template-columns:1fr 1fr}.hubgrid{grid-template-columns:1fr}}
+  @media (max-width:560px){.wrap{padding:16px}header.topbar{padding:14px 16px}.agrid{grid-template-columns:repeat(2,1fr)}.module-tag{display:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+
+  :root{
+    --ink:#0E1626; --ink-2:#1B2638; --surface:#F4F6F9; --card:#FFFFFF;
+    --line:#E2E6EE; --line-2:#EEF1F6; --muted:#6B7688; --text:#0E1626;
+    --input:#1C4ED8; --input-soft:#EAF0FE;
+    --pos:#117A4E; --pos-soft:#E2F3EA; --pend:#B5760A; --pend-soft:#FBF1DC;
+    --warn:#C0492B; --warn-soft:#F8E7E1; --in:#117A4E; --out:#B5760A; --accent:#3B5BDB;
+    --radius:10px; --shadow:0 1px 2px rgba(14,22,38,.06), 0 8px 24px rgba(14,22,38,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface);color:var(--text);font-family:"Inter",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+  header.topbar{background:var(--ink);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:20px}
+  .brand{display:flex;align-items:baseline;gap:12px}
+  .brand .mark{font-family:"Space Grotesk";font-weight:700;font-size:20px;letter-spacing:-.02em}
+  .brand .mark .v{color:#7FA0FF}
+  .brand .sub{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8FA0BC;font-weight:600}
+  .wrap{max-width:1340px;margin:0 auto;padding:24px 28px 64px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  section.blk{margin-bottom:22px}
+  .blkhead{display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap}
+  .blkhead h2{font-family:"Space Grotesk";font-size:15px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .blkhead .why{font-size:12px;color:var(--muted)}
+  .pad{padding:16px 18px}
+  .btn{display:inline-flex;align-items:center;gap:7px;cursor:pointer;background:none;border:1px solid var(--line);border-radius:7px;padding:8px 14px;font-family:"Inter";font-size:12.5px;font-weight:600;color:var(--muted)}
+  .btn:hover{border-color:var(--muted);color:var(--text)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#2f4ec0}
+
+  .ctrls{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
+  .ctrls .f label{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .ctrls .f input{width:84px;border:1px solid var(--line);background:var(--input-soft);border-radius:7px;padding:7px 9px;font-family:"JetBrains Mono";font-size:13.5px;font-weight:600;color:var(--input);text-align:right;outline:none}
+  .ctrls .f input:focus{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .ctrls .grow{flex:1}
+  .synced{font-size:12px;color:var(--muted)}
+  .synced b{color:var(--text)}
+
+  .rm-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+  .kpi .lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .kpi .val{font-family:"Space Grotesk";font-size:25px;font-weight:600;letter-spacing:-.02em;margin-top:5px}
+  .kpi .meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .kpi.flash{animation:flash .6s ease}
+  @keyframes flash{0%{background:#FBFCEF}100%{background:var(--card)}}
+  .kpi.neg .val{color:var(--warn)} .kpi.posv .val{color:var(--pos)}
+
+  .tl{padding:14px 10px 6px}
+  .tl h3{font-family:"Space Grotesk";font-size:13px;font-weight:600;margin:0 0 2px 8px}
+  .tl .sub{font-size:11.5px;color:var(--muted);margin:0 0 4px 8px}
+  svg{display:block;width:100%;height:auto}
+  .tl-legend{display:flex;gap:16px;flex-wrap:wrap;padding:6px 10px 4px;font-size:11.5px;color:var(--muted)}
+  .tl-legend .sw{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:-1px}
+
+  .flags{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+  .flag{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px;background:#fff}
+  .flag .dot{width:8px;height:8px;border-radius:50%}
+  .flag.over{border-color:var(--warn);background:var(--warn-soft)}
+  .flag.soon{border-color:var(--pend);background:var(--pend-soft)}
+  .flag .amt{font-family:"JetBrains Mono";font-weight:600}
+  .flag.none{color:var(--muted);border-style:dashed}
+
+  .scroll{overflow-x:auto}
+  table.data{width:100%;border-collapse:collapse;min-width:820px}
+  table.data thead th{background:var(--ink);color:#C7D3E8;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;padding:11px 12px;text-align:right;white-space:nowrap}
+  table.data thead th.l{text-align:left}
+  table.data tbody td{padding:9px 12px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap;font-family:"JetBrains Mono";font-size:12.5px}
+  table.data tbody td.l{text-align:left;font-family:"Inter"}
+  table.data tbody tr:hover td{background:#FAFBFD}
+  table.data tfoot td{background:var(--ink);color:#fff;padding:12px;text-align:right;font-weight:700;font-family:"JetBrains Mono"}
+  table.data tfoot td.l{text-align:left;font-family:"Space Grotesk"}
+  .nm{font-weight:600;font-family:"Inter"!important}
+  .ms{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;background:#EEF1F6;color:#41506A;font-family:"Inter"}
+  .rm-in{border:1px solid var(--line);background:var(--input-soft);border-radius:6px;padding:6px 8px;font-family:"JetBrains Mono";font-size:12px;font-weight:600;color:var(--input);text-align:right;outline:none}
+  .rm-in.date{width:140px;text-align:left}
+  .rm-in.txt{text-align:left;color:var(--text);font-family:"Inter";min-width:130px}
+  .rm-in.amt{width:104px}
+  .rm-in:focus{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .rm-sel{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 7px;font-family:"Inter";font-size:12px;font-weight:500;outline:none}
+  .st{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;font-family:"Inter"}
+  .st.paid{background:var(--pos-soft);color:var(--pos)}
+  .st.up{background:#EEF1F6;color:#41506A}
+  .st.soon{background:var(--pend-soft);color:var(--pend)}
+  .st.over{background:var(--warn-soft);color:var(--warn)}
+  .del{cursor:pointer;color:#B7C0CE;border:0;background:none;font-size:16px;padding:2px 6px}
+  .del:hover{color:var(--warn)}
+  .note{margin-top:18px;background:#FFF;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:13px 16px;font-size:12.5px;color:#41506A;display:flex;gap:10px}
+  .note b{color:var(--text)} .note .ic{color:var(--accent);font-weight:700;font-family:"JetBrains Mono"}
+
+  @media (max-width:980px){.rm-kpis{grid-template-columns:1fr 1fr}}
+  @media (max-width:560px){.wrap{padding:16px}header.topbar{padding:14px 16px}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.tabpanel{display:none}.tabpanel.active{display:block}
+.tabnav{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.tabnav button{cursor:pointer;border:1px solid #2C3A52;background:none;color:#9FB0CC;font-family:"Inter";font-size:13px;font-weight:600;padding:7px 16px;border-radius:999px}
+.tabnav button:hover{color:#fff}.tabnav button.active{background:#fff;color:var(--ink);border-color:#fff}
+.tabnav button .n{font-family:"JetBrains Mono";font-size:10px;opacity:.7;margin-right:5px}
+#tab-costing .agrid{grid-template-columns:repeat(6,1fr)}#tab-commission .agrid{grid-template-columns:repeat(7,1fr)}
+@media (max-width:980px){#tab-costing .agrid{grid-template-columns:repeat(3,1fr)}#tab-commission .agrid{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:560px){#tab-costing .agrid,#tab-commission .agrid{grid-template-columns:repeat(2,1fr)}.tabnav button .n{display:none}}
+
+#authGate{position:fixed;inset:0;z-index:1000;background:radial-gradient(circle at 30% 15%,#17243d,#0a111e 70%);display:flex;align-items:center;justify-content:center;padding:24px}
+.gate-card{background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.45);padding:40px 38px;max-width:440px;width:100%;text-align:center}
+.gate-brand .mark{font-family:"Space Grotesk";font-weight:700;font-size:30px;letter-spacing:-.02em;color:#0E1626}
+.gate-brand .mark .v{color:#3B5BDB}
+.gate-brand .gate-sub{display:block;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#6B7688;font-weight:600;margin-top:4px;margin-bottom:20px}
+.gate-lock{font-size:12.5px;font-weight:700;color:#0E1626;margin-bottom:8px;letter-spacing:.02em}
+.gate-msg{font-size:13.5px;color:#6B7688;line-height:1.55;margin:0 0 22px}
+.ms-btn{display:inline-flex;align-items:center;gap:11px;background:#2F2F2F;color:#fff;border:0;border-radius:8px;padding:12px 20px;font-family:"Inter";font-size:14px;font-weight:600;cursor:pointer;width:100%;justify-content:center}
+.ms-btn:hover{background:#1f1f1f}.ms-btn:disabled{opacity:.6;cursor:default}
+.ms-logo{display:grid;grid-template-columns:1fr 1fr;gap:2px;width:18px;height:18px}
+.ms-logo i{display:block;width:8px;height:8px}
+.ms-logo i:nth-child(1){background:#F25022}.ms-logo i:nth-child(2){background:#7FBA00}.ms-logo i:nth-child(3){background:#00A4EF}.ms-logo i:nth-child(4){background:#FFB900}
+.gate-alt{margin-top:10px;background:none;border:0;color:#6B7688;font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline}
+.gate-err{display:none;margin-top:16px;background:#F8E7E1;border:1px solid #E8C5BB;color:#A33417;border-radius:8px;padding:10px 13px;font-size:12.5px;line-height:1.5;text-align:left}
+.gate-foot{margin-top:22px;font-size:11px;color:#9AA6B8;letter-spacing:.04em}
+.gate-diag{margin-top:14px;border-top:1px solid #EEF1F6;padding-top:12px;font-size:10.5px;color:#9AA6B8;line-height:1.5;text-align:left}
+.gate-diag code{display:block;margin-top:4px;background:#F4F6F9;border:1px solid #E2E6EE;border-radius:6px;padding:7px 9px;font-family:"JetBrains Mono";font-size:11px;color:#0E1626;word-break:break-all}
+.diag-copy{margin-top:6px;background:none;border:1px solid #E2E6EE;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:#6B7688;cursor:pointer}
+.userchip{display:flex;align-items:center;gap:9px;margin-left:14px;font-size:13px;color:#C7D3E8;font-weight:600}
+.userchip .uc-dot{width:8px;height:8px;border-radius:50%;background:#3DDC84;box-shadow:0 0 6px #3DDC84}
+.uc-out{cursor:pointer;background:none;border:1px solid #2C3A52;color:#9FB0CC;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600}
+.uc-out:hover{color:#fff;border-color:#fff}
+</style>
+</head>
+<body>
+  <div id="authGate">
+    <div class="gate-card">
+      <div class="gate-brand"><span class="mark">Core<span class="v">V</span></span><span class="gate-sub">Finance Suite</span></div>
+      <div class="gate-lock">🔒 Restricted access</div>
+      <p class="gate-msg">Sign in with your Microsoft work account to continue. This application is limited to authorized users.</p>
+      <button id="msSignIn" class="ms-btn"><span class="ms-logo"><i></i><i></i><i></i><i></i></span> Sign in with Microsoft</button>
+      <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
+      <div id="authErr" class="gate-err"></div>
+      <div class="gate-foot">Authorized: Ahmed · Kamal · Sami</div>
+      <div class="gate-diag">If sign-in fails, register this redirect URI in Azure → App registration → Authentication, under the <b>Single-page application</b> platform:
+        <code id="redirUri"></code>
+        <button id="copyUri" class="diag-copy">Copy URI</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="appRoot" style="display:none">
+  <header class="topbar">
+    <div class="brand"><span class="mark">Core<span class="v">V</span></span><span class="sub">Finance Suite</span></div>
+    <nav class="tabnav">
+      <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
+      <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
+      <button data-tab="tab-reminders"><span class="n">03</span>Reminders</button>
+    </nav>
+    <div id="userChip" class="userchip" style="display:none"><span class="uc-dot"></span><span id="userName"></span><button id="signOut" class="uc-out">Sign out</button></div>
+  </header>
+
+  <div id="tab-costing" class="tabpanel active">
+
+  <div class="wrap">
+
+    <!-- ASSUMPTIONS -->
+    <section class="assumptions">
+      <div class="head">
+        <h2>Global assumptions</h2>
+        <span class="why">— change one value here and every product below recalculates instantly.</span>
+      </div>
+      <div class="agrid">
+        <div class="field">
+          <label>Exchange rate</label>
+          <div class="inputwrap"><span class="affix pre">USD→AED</span><input id="g_exch" type="number" step="0.01"></div>
+        </div>
+        <div class="field">
+          <label>VAT rate</label>
+          <div class="inputwrap"><input id="g_vat" type="number" step="0.5"><span class="affix">%</span></div>
+        </div>
+        <div class="field">
+          <label>Sales commission</label>
+          <div class="inputwrap"><input id="g_comm" type="number" step="0.5"><span class="affix">%</span></div>
+        </div>
+        <div class="field">
+          <label>Base referral</label>
+          <div class="inputwrap"><input id="g_ref" type="number" step="0.5"><span class="affix">%</span></div>
+        </div>
+        <div class="field">
+          <label>Operational cost</label>
+          <div class="inputwrap"><input id="g_op" type="number" step="0.5"><span class="affix">%</span></div>
+        </div>
+        <div class="field">
+          <label>OxeFit contribution</label>
+          <div class="inputwrap"><input id="g_contrib" type="number" step="0.5"><span class="affix">%</span></div>
+        </div>
+      </div>
+      <button class="reset" id="resetBtn">↺ Reset to baseline</button>
+    </section>
+
+    <!-- KPIS -->
+    <section class="kpis" id="kpis"></section>
+
+    <!-- TABLE -->
+    <section class="tablecard">
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="l">Product / SKU</th>
+              <th>Qty</th>
+              <th>MSRP<span class="u">USD · input</span></th>
+              <th>OxeFit cost<span class="u">USD · input</span></th>
+              <th>Discount<span class="u">AED · input</span></th>
+              <th>List price<span class="u">AED</span></th>
+              <th>Net revenue<span class="u">AED</span></th>
+              <th>OxeFit cost<span class="u">AED</span></th>
+              <th>Gross profit<span class="u">AED · %</span></th>
+              <th>CoreV cost<span class="u">AED</span></th>
+              <th>Net profit<span class="u">AED · %</span></th>
+              <th class="barcell">Split</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+          <tfoot id="tfoot"></tfoot>
+        </table>
+      </div>
+      <div class="legend">
+        <span class="k"><span class="sw" style="background:var(--input)"></span> Blue = editable input</span>
+        <span class="k"><span class="sw seg-oxe"></span> OxeFit cost</span>
+        <span class="k"><span class="sw seg-corev"></span> CoreV cost (commission · referral · ops)</span>
+        <span class="k"><span class="sw seg-net"></span> CoreV net profit</span>
+        <span class="k">Split bar shows how each AED of net revenue is divided.</span>
+      </div>
+    </section>
+
+    <div class="note">
+      <span class="ic">i</span>
+      <span>Operational cost is set to <b>12%</b> and wired to the assumption above (the old sheet calculated line items at 10% while the input said 12% — that's now consistent). The exchange rate is a single input that drives every USD-based figure. <b>Services</b> are entered directly in AED and run the same cost stack; tell me if warranties should drop sales commission.</span>
+    </div>
+
+  </div>
+
+</div>
+  <div id="tab-commission" class="tabpanel">
+  <div class="wrap">
+
+    <!-- RULES -->
+    <section class="blk">
+      <div class="blkhead"><h2>Commission rules</h2><span class="why">— global rates. Everything below recalculates as you edit.</span></div>
+      <div class="panel pad">
+        <div class="agrid">
+          <div class="field"><label>VAT</label><div class="inputwrap"><input id="r_vat" type="number" step="0.5"><span class="affix">%</span></div></div>
+          <div class="field"><label>Base rate (below target)</label><div class="inputwrap"><input id="r_base" type="number" step="0.1"><span class="affix">%</span></div></div>
+          <div class="field"><label>Min sales (of target)</label><div class="inputwrap"><input id="r_thr" type="number" step="1"><span class="affix">%</span></div></div>
+          <div class="field"><label>Accel 100–130%</label><div class="inputwrap"><input id="r_a1" type="number" step="0.1"><span class="affix">%</span></div></div>
+          <div class="field"><label>Accel 130–150%</label><div class="inputwrap"><input id="r_a2" type="number" step="0.1"><span class="affix">%</span></div></div>
+          <div class="field"><label>Accel beyond 150%</label><div class="inputwrap"><input id="r_b" type="number" step="0.1"><span class="affix">%</span></div></div>
+          <div class="field"><label>Referral rate</label><div class="inputwrap"><input id="r_ref" type="number" step="0.5"><span class="affix">%</span></div></div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="blkhead" style="margin-bottom:6px"><h2 style="font-size:13px">Participation matrix</h2><span class="why">— a rep's role on a deal sets target credit and earning %.</span></div>
+          <table class="matrix"><thead><tr><th class="l">Role / tag</th><th>Target credit ×</th><th>Earning ×</th><th>Applicable %</th></tr></thead><tbody id="matrixBody"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- HUBSPOT -->
+    <section class="blk">
+      <div class="blkhead"><h2>HubSpot</h2><span class="why">— pull closed-won deals via your Cloudflare Worker proxy: deal value → Gross (AED), deal name → customer, owner → rep, close date → month.</span></div>
+      <div class="panel pad">
+        <div class="hubrow">
+          <div class="field" style="flex:2;min-width:230px"><label>Cloudflare Worker proxy URL</label><input id="hs_proxy" class="hub-in" type="text" placeholder="https://your-worker.workers.dev"></div>
+          <div class="field" style="flex:2;min-width:200px"><label>Private app token</label><input id="hs_token" class="hub-in" type="password" placeholder="pat-..."></div>
+          <button class="btn hub" id="hs_connect">Connect</button>
+          <button class="btn" id="hs_worker">Worker setup</button>
+        </div>
+        <div class="hub-status" id="hs_status">HubSpot blocks direct browser calls, so connect through a free Cloudflare Worker (click <b>Worker setup</b>). Or use CSV import below.</div>
+        <div id="hs_workerbox" style="display:none;margin-top:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Deploy at dash.cloudflare.com → Workers &amp; Pages → Create → paste &amp; Deploy, then paste the <code>*.workers.dev</code> URL above. It only forwards requests; the token stays in your browser.</div>
+          <div style="position:relative"><button class="btn sm" id="hs_copyworker" style="position:absolute;top:6px;right:6px;z-index:2">Copy</button><pre id="hs_workercode" class="hs-pre"></pre></div>
+        </div>
+        <div class="toolrow" style="margin-top:12px">
+          <button class="btn" id="hs_loadowners">Load owners</button>
+          <button class="btn hub" id="hs_fetch">⤓ Fetch closed-won deals</button>
+        </div>
+        <div id="hs_ownermap" class="hs-ownermap"></div>
+        <details style="margin-top:14px">
+          <summary style="cursor:pointer;font-size:12px;color:var(--muted)">CSV import (fallback — no proxy needed)</summary>
+          <div style="margin-top:8px">
+            <textarea class="csv" id="hs_csv" placeholder="Paste HubSpot deals CSV (headers: Deal Name, Amount, Deal owner, Close Date, Deal Stage)…"></textarea>
+            <div class="toolrow" style="margin-top:8px"><input type="file" id="hs_file" accept=".csv" style="font-size:12px"><button class="btn primary" id="hs_import">Import CSV</button></div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- TEAM SUMMARY -->
+    <section class="blk">
+      <div class="blkhead"><h2>Team summary</h2><span class="why">— click a rep to open their deals below.</span></div>
+      <div class="kpis" id="ckpis" style="margin-bottom:14px"></div>
+      <div class="panel scroll">
+        <table class="data"><thead><tr><th class="l">Rep</th><th>Monthly target</th><th>Sales (excl VAT)</th><th>Attainment</th><th>Earned commission</th><th>Eligible (collected)</th><th>Pending (uncollected)</th></tr></thead>
+          <tbody id="summaryBody"></tbody><tfoot id="summaryFoot"></tfoot></table>
+      </div>
+    </section>
+
+    <!-- REP WORKSPACE -->
+    <section class="blk">
+      <div class="blkhead"><h2>Rep workspace</h2><span class="why">— enter each deal once; tick Future to attach a payment plan.</span></div>
+      <div class="reptabs" id="repTabs"></div>
+      <div class="panel">
+        <div class="repbar" id="repBar"></div>
+        <div class="scroll">
+          <table class="deals"><thead><tr><th class="l">Type</th><th class="l">Customer</th><th>Gross (AED)</th><th>Excl VAT</th><th class="l">Participation</th><th>Applicable %</th><th>Commission</th><th>Collected %</th><th>Eligible</th><th>Pending</th><th class="l">Closed</th><th>Future</th><th></th></tr></thead>
+            <tbody id="dealsBody"></tbody><tfoot id="dealsFoot"></tfoot></table>
+        </div>
+        <div id="payoutProj"></div>
+        <div id="accelBox"></div>
+        <div class="toolrow" style="padding:0 18px 16px"><button class="btn primary" id="addDeal">+ Add deal</button></div>
+        <div class="legend">
+          <span><span class="sw" style="background:var(--input)"></span>Blue = input</span>
+          <span><span class="sw" style="background:var(--pos)"></span>Eligible (paid on collection)</span>
+          <span><span class="sw" style="background:var(--pend)"></span>Pending cash collection</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- REFERRALS -->
+    <section class="blk">
+      <div class="blkhead"><h2>Referrals</h2><span class="why">— separate flat-rate stream, also paid on collection.</span>
+        <span style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn sm" id="ref_pdf">⤓ Referral PDF</button>
+          <button class="btn sm" id="ref_email">✉ Email</button>
+        </span>
+      </div>
+      <div class="panel scroll">
+        <table class="data"><thead><tr><th class="l">Customer</th><th>Gross (AED)</th><th>Excl VAT</th><th>Rate %</th><th>Commission</th><th>Collected %</th><th>Eligible</th><th class="l">Closed</th><th></th></tr></thead>
+          <tbody id="refBody"></tbody><tfoot id="refFoot"></tfoot></table>
+        <div class="toolrow" style="padding:12px 18px 16px"><button class="btn primary" id="addRef">+ Add referral</button></div>
+      </div>
+    </section>
+
+    <div class="note"><span class="ic">i</span><span>Per-deal commission verified against your v2 sheet (Wafiq 5,758.85 → 1,727.66 after 30% collection). The <b>25% minimum gates all commission</b>; above 100% reps keep per-deal commission <b>plus</b> an accelerator on the excess. Tick <b>Future</b> on a deal to attach a payment plan — eligible commission then unlocks as installments fall due, and the monthly payout projection shows when each lands.</span></div>
+  </div>
+
+</div>
+  <div id="tab-reminders" class="tabpanel">
+  <div class="wrap">
+
+    <!-- CONTROLS -->
+    <section class="blk">
+      <div class="blkhead"><h2>Payment reminders</h2><span class="why">— receivables sync from the Commission tab; payables are entered here.</span></div>
+      <div class="panel pad">
+        <div class="ctrls">
+          <div class="f"><label>Due-soon window</label><input id="rm_soon" type="number" step="1"><span style="font-size:11px;color:var(--muted);margin-left:4px">days</span></div>
+          <div class="f"><label>Acceptance (20%)</label><input id="rm_off1" type="number" step="1"><span style="font-size:11px;color:var(--muted);margin-left:4px">days</span></div>
+          <div class="f"><label>PO / contract (50%)</label><input id="rm_off2" type="number" step="1"><span style="font-size:11px;color:var(--muted);margin-left:4px">days</span></div>
+          <div class="f"><label>Delivery (30%)</label><input id="rm_off3" type="number" step="1"><span style="font-size:11px;color:var(--muted);margin-left:4px">days</span></div>
+          <div class="grow"></div>
+          <div style="text-align:right"><div class="synced" id="rm-synced"></div><button class="btn" id="rm-resync" style="margin-top:6px">↻ Re-sync from commission</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section class="blk">
+      <div class="blkhead"><h2>Dashboard</h2></div>
+      <div class="rm-kpis" id="rm-kpis"></div>
+      <div class="panel tl">
+        <h3>Cash timeline — next 90 days</h3>
+        <p class="sub">Outstanding payments by due date. Receivables in above the line, payables out below. Overdue items pinned left.</p>
+        <div id="rm-timeline"></div>
+        <div class="tl-legend">
+          <span><span class="sw" style="background:var(--in)"></span>Receivable (in)</span>
+          <span><span class="sw" style="background:var(--out)"></span>Payable (out)</span>
+          <span><span class="sw" style="background:var(--warn)"></span>Overdue</span>
+          <span>Hover a dot for detail.</span>
+        </div>
+      </div>
+      <div class="flags" id="rm-flags"></div>
+    </section>
+
+    <!-- RECEIVABLES -->
+    <section class="blk">
+      <div class="blkhead"><h2>Receivables — customer milestones</h2><span class="why">— 20% acceptance · 50% PO/contract · 30% delivery. Paid status follows each deal's collected % from commission.</span></div>
+      <div class="panel scroll">
+        <table class="data">
+          <thead><tr>
+            <th class="l">Customer</th><th class="l">Rep</th><th class="l">Milestone</th>
+            <th>Amount</th><th class="l">Due date</th><th>Status</th><th>Paid</th>
+          </tr></thead>
+          <tbody id="rm-recvBody"></tbody>
+          <tfoot id="rm-recvFoot"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- PAYABLES -->
+    <section class="blk">
+      <div class="blkhead"><h2>Payables — money owed out</h2><span class="why">— vendors, OxeFit, logistics, etc.</span></div>
+      <div class="panel scroll">
+        <table class="data">
+          <thead><tr>
+            <th class="l">Payee</th><th class="l">Description</th><th>Amount</th>
+            <th class="l">Due date</th><th class="l">Recurrence</th><th>Status</th><th>Paid</th><th></th>
+          </tr></thead>
+          <tbody id="rm-payBody"></tbody>
+          <tfoot id="rm-payFoot"></tfoot>
+        </table>
+        <div style="padding:12px 18px 16px"><button class="btn primary" id="rm-addPay">+ Add payable</button></div>
+      </div>
+    </section>
+
+    <div class="note"><span class="ic">i</span><span>Receivables are generated live from the Commission tab: each deal becomes a 20/50/30 milestone schedule anchored on its closed month, and milestones flip to <b>Paid</b> as the deal's collected % rises (20% collected pays acceptance, 70% pays through PO, 100% clears delivery). Edit a due date or override Paid here and it sticks; payables are fully manual.</span></div>
+  </div>
+
+</div>
+  </div>
+
+<script>
+(function(){
+  const CFG={clientId:'cd1b7f5f-5ff9-4066-ab4f-06f270a94fcb',authority:'https://login.microsoftonline.com/core-velocity.com',redirectUri:location.origin+location.pathname};
+  const ALLOWED={'ahmed@core-velocity.com':'Ahmed','sami@core-velocity.com':'Sami','kamal@core-velocity.com':'Kamal'};
+  const $=id=>document.getElementById(id);
+  const gate=$('authGate'),app=$('appRoot'),errEl=$('authErr'),btn=$('msSignIn'),altBtn=$('altSignIn'),chip=$('userChip'),nameEl=$('userName');
+  let inst=null,account=null;
+  const nameFor=e=>ALLOWED[(e||'').toLowerCase().trim()]||null;
+  const showErr=m=>{errEl.innerHTML=m;errEl.style.display='block';};
+  const clearErr=()=>{errEl.style.display='none';};
+  function unlock(name){ gate.style.display='none'; app.style.display='block'; nameEl.textContent=name; chip.style.display='flex'; }
+  function lock(){ gate.style.display='flex'; app.style.display='none'; chip.style.display='none'; }
+  function forget(){ try{Object.keys(localStorage).filter(k=>k.indexOf('msal.')===0).forEach(k=>localStorage.removeItem(k));}catch(_){} account=null; }
+  function clearLocks(){ try{Object.keys(localStorage).filter(k=>k.indexOf('msal')>=0&&/interaction.status/i.test(k)).forEach(k=>localStorage.removeItem(k));}catch(_){} try{Object.keys(sessionStorage).filter(k=>k.indexOf('msal')>=0).forEach(k=>sessionStorage.removeItem(k));}catch(_){} }
+  function fmtErr(e){
+    const m=(e&&(e.errorCode||e.message))||String(e||'unknown');
+    if(/9002326|cross-origin token redemption|single[- ]?page/i.test(m)) return '<b>Azure platform mismatch.</b> This app must be registered as a <b>Single-page application</b>. In Azure → App registration → <b>Authentication</b>, remove the URI from “Web” and add it under <b>Single-page application</b>. URI to register is shown below.';
+    if(/AADSTS50011|redirect_uri|reply url|does not match|redirect URI/i.test(m)) return '<b>Redirect URI not registered.</b> Add <i>exactly</i> the URI shown below in Azure → Authentication → Single-page application (it must match character-for-character).';
+    if(/AADSTS65001|consent|AADSTS90094/i.test(m)) return '<b>Admin consent needed.</b> An admin must grant consent for this app in Azure, then try again.';
+    if(/AADSTS700016|application.*not found|unauthorized_client/i.test(m)) return '<b>App not found in this tenant.</b> Confirm the Azure app registration exists in core-velocity.com.';
+    if(/interaction_in_progress/i.test(m)){ clearLocks(); return 'A previous sign-in was still in progress — cleared it. Please click sign in again.'; }
+    if(/user_cancelled|user_cancel/i.test(m)) return '';
+    return 'Sign-in error: '+m;
+  }
+  function finish(acct){
+    const email=(acct&&acct.username)||''; const nm=nameFor(email);
+    if(!nm){ showErr('Your Microsoft account ('+email+') is not authorized. Access is limited to Ahmed, Kamal and Sami.'); forget(); return; }
+    account=acct; clearErr(); unlock(nm);
+  }
+  function init(){
+    if(typeof msal==='undefined'){ showErr('Microsoft sign-in library failed to load — check your connection and reload.'); return; }
+    try{ inst=new msal.PublicClientApplication({auth:CFG,cache:{cacheLocation:'localStorage'}}); }
+    catch(e){ showErr(fmtErr(e)); return; }
+    inst.initialize()
+      .then(()=>inst.handleRedirectPromise())
+      .then(rr=>{
+        if(rr&&rr.account){ return finish(rr.account); }
+        const a=inst.getAllAccounts();
+        if(a.length){ const nm=nameFor(a[0].username); if(nm){ account=a[0]; unlock(nm); return; } forget(); }
+      })
+      .catch(e=>{ const m=fmtErr(e); if(m) showErr(m); });
+  }
+  function go(useRedirect){
+    if(!inst){ showErr('Still loading — try again in a moment.'); return; }
+    clearErr(); clearLocks(); btn.disabled=true;
+    const req={scopes:['User.Read'],prompt:'select_account'};
+    if(useRedirect){
+      inst.loginRedirect(req).catch(e=>{ btn.disabled=false; const m=fmtErr(e); if(m) showErr(m); });
+    } else {
+      inst.loginPopup(req).then(res=>{ btn.disabled=false; finish(res.account); })
+        .catch(e=>{ btn.disabled=false; const msg=(e&&(e.errorCode||e.message))||'';
+          if(/popup_window_error|running in a popup|popup.*block/i.test(msg)){ go(true); return; }
+          const m=fmtErr(e); if(m) showErr(m); });
+    }
+  }
+  function signOut(){
+    try{ inst.logoutRedirect({account,postLogoutRedirectUri:CFG.redirectUri}); }
+    catch(_){ forget(); lock(); }
+  }
+  // Diagnostics — show the exact URI to register
+  const ru=$('redirUri'); if(ru) ru.textContent=CFG.redirectUri;
+  const cu=$('copyUri'); if(cu) cu.addEventListener('click',()=>{navigator.clipboard.writeText(CFG.redirectUri).then(()=>{const o=cu.textContent;cu.textContent='✓ copied';setTimeout(()=>cu.textContent=o,1400);});});
+  btn.addEventListener('click',()=>go(true));            // primary: redirect (most reliable)
+  altBtn.addEventListener('click',()=>go(false));        // fallback: popup
+  $('signOut').addEventListener('click',signOut);
+  init();
+})();
+</script>
+<script>
+document.querySelectorAll('.tabnav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabnav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tabpanel').forEach(p=>p.classList.remove('active'));
+  b.classList.add('active'); document.getElementById(b.dataset.tab).classList.add('active');
+}));
+</script>
+<script>(function(){
+
+"use strict";
+
+const BASE = {
+  exch:3.67, vat:0.05, comm:0.02, ref:0.0, op:0.12, contrib:0.0,
+  markup:{ xs1:0.15, xp1:0.10 }
+};
+
+// segment products: cost derived from USD inputs + markup
+const PRODUCTS = [
+  {group:"Consumer", rows:[
+    {name:"FLOW Consumer",        sku:"MENA-XS1-FLOW-XFIT-12MO",       msrp:8998,  cost:5773.1, mk:"xs1", disc:1640, qty:1},
+    {name:"PEAK Consumer",        sku:"MENA-XS1-PEAK-XFIT-12MO",       msrp:9996,  cost:6423.5, mk:"xs1", disc:1640, qty:1},
+    {name:"FLOW-PLUS Consumer",   sku:"MENA-XS1-FLOW-PLUS-XFIT-36MO",  msrp:10498, cost:6198.5, mk:"xs1", disc:1640, qty:1},
+    {name:"PEAK-PLUS Consumer",   sku:"MENA-XS1-PEAK-PLUS-XFIT-36MO",  msrp:11498, cost:6948.5, mk:"xs1", disc:1640, qty:1},
+    {name:"XP1 Consumer",         sku:"MENA-XP1-XFIT-3YR",             msrp:64249, cost:38549.4,mk:"xp1", disc:10000,qty:1},
+  ]},
+  {group:"Commercial & Membership", rows:[
+    {name:"FLOW-PLUS Commercial", sku:"MENA-XS1-FLOW-PLUS-APEX-36MO",  msrp:11998, cost:6648.5, mk:"xs1", disc:5000, qty:1},
+    {name:"PEAK-PLUS Commercial", sku:"MENA-XS1-PEAK-PLUS-APEX-36MO",  msrp:12998, cost:7398.5, mk:"xs1", disc:5000, qty:1},
+    {name:"XP1 Commercial",       sku:"MENA-XP1-APEX-3YR",             msrp:73999, cost:44399.4,mk:"xp1", disc:15000,qty:1},
+    {name:"OxeLead Upgrade",      sku:"MENA-MEM-XLEAD-2500-SESS",      msrp:3750,  cost:1250,   mk:"xs1", disc:6000, qty:1},
+  ]}
+];
+
+// services: direct AED selling price + AED cost (editable)
+const SERVICES = {group:"Services", rows:[
+  {name:"Warranty: limited → full (per yr)",        sku:"SVC-WARR-FULL",      sell:3119.5,  cost:367,     disc:0, qty:1, svc:true},
+  {name:"Annual OxeFit subscription (per yr)",      sku:"SVC-SUB-OXEFIT",     sell:2752.5,  cost:2202,    disc:0, qty:1, svc:true},
+  {name:"+1 yr warranty after 3yr · XS1",           sku:"SVC-WARR-XS1",       sell:4937.23, cost:871.63,  disc:0, qty:1, svc:true},
+  {name:"Upgrade FLOW → FLOW+ (2yr)",               sku:"SVC-UPG-FLOW",       sell:11744,   cost:1561.22, disc:0, qty:1, svc:true},
+  {name:"Upgrade PEAK → PEAK+ (2yr)",               sku:"SVC-UPG-PEAK",       sell:11744,   cost:1926.75, disc:0, qty:1, svc:true},
+  {name:"+1 yr warranty after 3yr · XP1",           sku:"SVC-WARR-XP1",       sell:26886.06,cost:1376.25, disc:0, qty:1, svc:true},
+]};
+
+let G = structuredClone(BASE);
+let DATA = structuredClone(PRODUCTS);
+let SVC = structuredClone(SERVICES);
+
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const pct = n => (n*100).toFixed(1) + "%";
+const ROOT = document.getElementById('tab-costing');
+  const $ = id => ROOT.querySelector('#'+id);
+
+function calcRow(r){
+  const sell = r.svc ? r.sell : r.msrp * G.exch * (1 + G.markup[r.mk]);
+  const netRev = sell - r.disc;
+  const oxe = r.svc ? r.cost : r.cost * G.exch * (1 - G.contrib);
+  const gross = netRev - oxe;
+  const grossPct = netRev ? gross/netRev : 0;
+  const corevCost = netRev * (G.comm + G.ref + G.op);
+  const net = gross - corevCost;
+  const netPct = sell ? net/sell : 0;
+  return {sell, netRev, oxe, gross, grossPct, corevCost, net, netPct};
+}
+
+function num(v, step){
+  return `<input class="cell-in${step==='qty'?' qty':''}" type="number" `+
+         `data-step="${step}" value="${v}">`;
+}
+
+function renderGroup(group, rows, isSvc){
+  let html = `<tr class="grouprow"><td colspan="12">${group}</td></tr>`;
+  let sub = {netRev:0, oxe:0, gross:0, corev:0, net:0, sell:0};
+  rows.forEach((r,i)=>{
+    const c = calcRow(r);
+    const q = r.qty;
+    sub.netRev += c.netRev*q; sub.oxe += c.oxe*q; sub.gross += c.gross*q;
+    sub.corev += c.corevCost*q; sub.net += c.net*q; sub.sell += c.sell*q;
+    const oxeW = c.netRev>0 ? Math.max(0,(c.oxe/c.netRev)*100) : 0;
+    const corevW = c.netRev>0 ? Math.max(0,(c.corevCost/c.netRev)*100) : 0;
+    const netW = Math.max(0, 100 - oxeW - corevW);
+    const thin = c.netPct < 0.27;
+    const tag = isSvc?'svc':'prod';
+    html += `<tr data-tag="${tag}" data-i="${i}">
+      <td class="l"><div class="pname">${r.name}</div><div class="psku">${r.sku}</div></td>
+      <td>${num(r.qty,'qty')}</td>
+      ${ isSvc
+         ? `<td class="derived" style="color:var(--muted)">—</td>
+            <td>${num(r.cost,'cost')}</td>`
+         : `<td>${num(r.msrp,'msrp')}</td>
+            <td>${num(r.cost,'cost')}</td>` }
+      <td>${num(r.disc,'disc')}</td>
+      <td class="derived">${fmt(c.sell)}</td>
+      <td class="derived">${fmt(c.netRev)}</td>
+      <td class="derived">${fmt(c.oxe)}</td>
+      <td class="derived">${fmt(c.gross)} <span class="pct good">${pct(c.grossPct)}</span></td>
+      <td class="derived">${fmt(c.corevCost)}</td>
+      <td class="derived net">${fmt(c.net)} <span class="pct ${thin?'thin':'good'}">${pct(c.netPct)}</span></td>
+      <td class="barcell"><div class="bar" title="OxeFit ${oxeW.toFixed(0)}% · CoreV ${corevW.toFixed(0)}% · Net ${netW.toFixed(0)}%">
+        <span class="seg-oxe" style="width:${oxeW}%"></span>
+        <span class="seg-corev" style="width:${corevW}%"></span>
+        <span class="seg-net" style="width:${netW}%"></span>
+      </div></td>
+    </tr>`;
+  });
+  const subNetPct = sub.sell ? sub.net/sub.sell : 0;
+  const subGrossPct = sub.netRev ? sub.gross/sub.netRev : 0;
+  html += `<tr class="subtotal">
+    <td class="l">${group} subtotal</td>
+    <td></td><td></td><td></td><td></td>
+    <td class="tnum">${fmt(sub.sell)}</td>
+    <td class="tnum">${fmt(sub.netRev)}</td>
+    <td class="tnum">${fmt(sub.oxe)}</td>
+    <td class="tnum">${fmt(sub.gross)} <span class="pct good">${pct(subGrossPct)}</span></td>
+    <td class="tnum">${fmt(sub.corev)}</td>
+    <td class="tnum net">${fmt(sub.net)} <span class="pct good">${pct(subNetPct)}</span></td>
+    <td></td>
+  </tr>`;
+  return {html, sub};
+}
+
+function render(){
+  let body = "";
+  let tot = {netRev:0, oxe:0, gross:0, corev:0, net:0, sell:0};
+  DATA.forEach(g=>{
+    const {html, sub} = renderGroup(g.group, g.rows, false);
+    body += html;
+    for(const k in tot) tot[k] += (k==='corev'?sub.corev:sub[k]);
+  });
+  const svcRender = renderGroup(SVC.group, SVC.rows, true);
+  body += svcRender.html;
+  for(const k in tot) tot[k] += (k==='corev'?svcRender.sub.corev:svcRender.sub[k]);
+
+  $("tbody").innerHTML = body;
+
+  const totNetPct = tot.sell ? tot.net/tot.sell : 0;
+  const totGrossPct = tot.netRev ? tot.gross/tot.netRev : 0;
+  $("tfoot").innerHTML = `<tr>
+    <td class="l">Portfolio total — 1 unit each</td>
+    <td></td><td></td><td></td><td></td>
+    <td class="tnum">${fmt(tot.sell)}</td>
+    <td class="tnum">${fmt(tot.netRev)}</td>
+    <td class="tnum">${fmt(tot.oxe)}</td>
+    <td class="tnum">${fmt(tot.gross)} · ${pct(totGrossPct)}</td>
+    <td class="tnum">${fmt(tot.corev)}</td>
+    <td class="tnum">${fmt(tot.net)} · ${pct(totNetPct)}</td>
+    <td></td>
+  </tr>`;
+
+  renderKPIs();
+  bindCells();
+}
+
+function renderKPIs(){
+  // gather per-row results across products + services
+  const all = [];
+  DATA.forEach(g=>g.rows.forEach(r=>all.push({r, c:calcRow(r)})));
+  SVC.rows.forEach(r=>all.push({r, c:calcRow(r)}));
+  const prodOnly = [];
+  DATA.forEach(g=>g.rows.forEach(r=>prodOnly.push(calcRow(r))));
+
+  const avg = arr => arr.reduce((a,b)=>a+b,0)/arr.length;
+  const avgGross = avg(prodOnly.map(c=>c.grossPct));
+  const avgNet = avg(prodOnly.map(c=>c.netPct));
+  let minObj = all.reduce((m,x)=> x.c.netPct < m.c.netPct ? x : m, all[0]);
+  const corevLoad = G.comm + G.ref + G.op;
+
+  const cards = [
+    {lbl:"Avg gross margin", val:pct(avgGross), meta:"after OxeFit cost · products"},
+    {lbl:"Avg net margin", val:pct(avgNet), meta:"CoreV net · on list price"},
+    {lbl:"Lowest net margin", val:pct(minObj.c.netPct), meta:minObj.r.name},
+    {lbl:"CoreV cost load", val:pct(corevLoad), meta:"commission + referral + ops"},
+  ];
+  $("kpis").innerHTML = cards.map(c=>`
+    <div class="kpi"><div class="lbl">${c.lbl}</div>
+    <div class="val tnum">${c.val}</div><div class="meta">${c.meta}</div></div>`).join("");
+}
+
+function flashKpis(){
+  ROOT.querySelectorAll(".kpi").forEach(k=>{
+    k.classList.remove("flash"); void k.offsetWidth; k.classList.add("flash");
+  });
+}
+
+function bindCells(){
+  ROOT.querySelectorAll(".cell-in").forEach(inp=>{
+    inp.addEventListener("change", e=>{
+      const tr = e.target.closest("tr");
+      const tag = tr.dataset.tag, i = +tr.dataset.i, step = e.target.dataset.step;
+      const val = parseFloat(e.target.value)||0;
+      const target = tag==='svc' ? SVC.rows[i] : findProd(tr, i);
+      target[step] = val;
+      render(); flashKpis();
+    });
+  });
+}
+
+// products are grouped; map a row's group by walking rendered order
+function findProd(tr, i){
+  // determine which group this row belongs to by counting group headers before it
+  let groupIdx = -1, node = tr;
+  while(node = node.previousElementSibling){
+    if(node.classList.contains("grouprow")){ break; }
+  }
+  // recompute groupIdx from the header text
+  const header = node ? node.textContent.trim() : "";
+  groupIdx = DATA.findIndex(g=>g.group===header);
+  return DATA[groupIdx].rows[i];
+}
+
+function bindGlobals(){
+  const map = [["g_exch","exch",1],["g_vat","vat",100],["g_comm","comm",100],
+               ["g_ref","ref",100],["g_op","op",100],["g_contrib","contrib",100]];
+  map.forEach(([id,key,scale])=>{
+    const el = $(id);
+    el.value = scale===1 ? G[key] : +(G[key]*100).toFixed(2);
+    el.addEventListener("input", ()=>{
+      const v = parseFloat(el.value)||0;
+      G[key] = scale===1 ? v : v/100;
+      render(); flashKpis();
+    });
+  });
+}
+
+$("resetBtn").addEventListener("click", ()=>{
+  G = structuredClone(BASE);
+  DATA = structuredClone(PRODUCTS);
+  SVC = structuredClone(SERVICES);
+  bindGlobals(); render();
+});
+
+bindGlobals();
+render();
+
+})();</script>
+<script>(function(){
+
+"use strict";
+const ROOT = document.getElementById('tab-commission');
+  const $ = id => ROOT.querySelector('#'+id);
+
+const BASE_RULES = { vat:0.05, base:0.02, thr:0.25, a1:0.035, a2:0.05, b:0.035, ref:0.05 };
+const BASE_MATRIX = {
+  "FULL":{target:1.0,earn:1.0,cls:"full"}, "TEAMING+":{target:1.0,earn:0.7,cls:"tp"},
+  "HALF":{target:0.5,earn:0.5,cls:"half"}, "TEAMING":{target:0.3,earn:0.3,cls:"team"}, "N/A":{target:0.0,earn:0.0,cls:"na"},
+};
+const BASE_REPS = [
+  {name:"Marios",target:270000,deals:[{type:"B2C",cust:"Dee Alisilmi",gross:42575.53,tag:"FULL",coll:1,month:"Apr/26",future:false,plan:[]}]},
+  {name:"Fatima",target:270000,deals:[{type:"B2C",cust:"Dee Alisilmi",gross:42575.53,tag:"FULL",coll:1,month:"Apr/26",future:false,plan:[]}]},
+  {name:"Connor",target:270000,deals:[{type:"B2C",cust:"Dee Alisilmi",gross:42575.53,tag:"FULL",coll:1,month:"Apr/26",future:false,plan:[]}]},
+  {name:"Wafiq",target:945000,deals:[{type:"B2B",cust:"TADAWI",gross:432996.6,tag:"TEAMING+",coll:0.3,month:"Nov/25",future:true,plan:[]}]},
+  {name:"Jawdat",target:498000,deals:[]},
+];
+const BASE_REFS = [{cust:"Mohammad Sharafi",gross:49221.18,coll:1,month:"Jan/26"}];
+
+let RULES=structuredClone(BASE_RULES), MATRIX=structuredClone(BASE_MATRIX), REPS=structuredClone(BASE_REPS), REFS=structuredClone(BASE_REFS), sel=0;
+let plansOpen=new Set();
+
+const fmt=n=>Math.round(n).toLocaleString("en-US");
+const f2=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct=(n,d=1)=>(n*100).toFixed(d)+"%";
+const tagOpts=s=>Object.keys(MATRIX).map(k=>`<option ${k===s?'selected':''}>${k}</option>`).join("");
+const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+const addDaysISO=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const ymLabel=ym=>{const[y,m]=ym.split("-");return MON[(+m)-1]+" "+y.slice(2);};
+
+function applPct(tag){return RULES.base*(MATRIX[tag]?.earn??0);}
+function effColl(d){
+  if(d.future && d.plan && d.plan.length){
+    const t=todayISO(); let s=0;
+    d.plan.forEach(p=>{ if(p.date && p.date<=t) s+=(p.pct||0); });
+    return Math.min(1,s);
+  }
+  return d.coll||0;
+}
+function dealCalc(d){
+  const ex=d.gross*(1-RULES.vat), appl=applPct(d.tag), comm=ex*appl, coll=effColl(d);
+  return {ex,appl,comm,coll,elig:comm*coll,pend:comm*(1-coll),tgt:ex*(MATRIX[d.tag]?.target??0)};
+}
+function repRoll(r){
+  let sales=0,tgt=0,commRaw=0,eligRaw=0;
+  r.deals.forEach(d=>{const c=dealCalc(d);sales+=c.ex;tgt+=c.tgt;commRaw+=c.comm;eligRaw+=c.elig;});
+  const attain=r.target>0?tgt/r.target:0, minReq=r.target*RULES.thr, gated=(r.target>0&&attain<RULES.thr);
+  let accelEarned=0;
+  if(!gated&&r.target>0&&tgt>r.target){
+    const t130=r.target*1.3,t150=r.target*1.5;
+    accelEarned+=(Math.min(tgt,t130)-r.target)*RULES.a1;
+    if(tgt>t130)accelEarned+=(Math.min(tgt,t150)-t130)*RULES.a2;
+    if(tgt>t150)accelEarned+=(tgt-t150)*RULES.b;
+  }
+  const blendColl=commRaw>0?eligRaw/commRaw:0, accelElig=accelEarned*blendColl;
+  const earned=gated?0:(commRaw+accelEarned), eligible=gated?0:(eligRaw+accelElig), pending=gated?0:(earned-eligible);
+  return {sales,tgt,attain,minReq,gated,commRaw,eligRaw,accelEarned,accelElig,blendColl,earned,eligible,pending};
+}
+// monthly payout projection from future installments
+function repProjection(r){
+  const m={};
+  r.deals.forEach(d=>{
+    if(!(d.future&&d.plan&&d.plan.length))return;
+    const comm=dealCalc(d).comm, t=todayISO();
+    d.plan.forEach(p=>{ if(p.date && p.date>t){ const ym=p.date.slice(0,7); m[ym]=(m[ym]||0)+comm*(p.pct||0); } });
+  });
+  return Object.keys(m).sort().map(ym=>({ym,amt:m[ym]}));
+}
+
+function renderMatrix(){
+  $("matrixBody").innerHTML=Object.entries(MATRIX).map(([k,m])=>`
+    <tr data-tag="${k}"><td class="l"><span class="tag ${m.cls}">${k}</span></td>
+    <td><input class="mini" data-f="target" type="number" step="0.05" value="${m.target}"></td>
+    <td><input class="mini" data-f="earn" type="number" step="0.05" value="${m.earn}"></td>
+    <td>${pct(applPct(k),2)}</td></tr>`).join("");
+  $("matrixBody").querySelectorAll("input").forEach(inp=>inp.addEventListener("change",e=>{
+    MATRIX[e.target.closest("tr").dataset.tag][e.target.dataset.f]=parseFloat(e.target.value)||0; renderAll();
+  }));
+}
+function renderSummary(){
+  let body="",tot={comm:0,elig:0,pend:0,sales:0};
+  REPS.forEach((r,i)=>{
+    const R=repRoll(r); tot.sales+=R.sales;tot.comm+=R.earned;tot.elig+=R.eligible;tot.pend+=R.pending;
+    let cls,lbl=pct(R.attain,0);
+    if(R.gated){cls="a-min";lbl+=" ⚠";} else if(R.attain>=1){cls="a-on";} else{cls="a-below";}
+    body+=`<tr class="clickable ${i===sel?'active':''}" data-i="${i}"><td class="l nm">${r.name}</td><td>${fmt(r.target)}</td><td>${fmt(R.sales)}</td>
+      <td><span class="att-pill ${cls}">${lbl}</span></td><td>${f2(R.earned)}</td>
+      <td style="color:var(--pos);font-weight:700">${f2(R.eligible)}</td><td style="color:var(--pend)">${f2(R.pending)}</td></tr>`;
+  });
+  $("summaryBody").innerHTML=body;
+  $("summaryBody").querySelectorAll("tr").forEach(tr=>tr.addEventListener("click",()=>{sel=+tr.dataset.i;plansOpen.clear();renderAll();}));
+  const refElig=REFS.reduce((a,r)=>a+r.gross*(1-RULES.vat)*RULES.ref*(r.coll||0),0);
+  $("summaryFoot").innerHTML=`<tr><td class="l">Team total</td><td></td><td class="tnum">${fmt(tot.sales)}</td><td></td><td class="tnum">${f2(tot.comm)}</td><td class="tnum">${f2(tot.elig)}</td><td class="tnum">${f2(tot.pend)}</td></tr>`;
+  const refEarn=REFS.reduce((a,r)=>a+r.gross*(1-RULES.vat)*RULES.ref,0);
+  $("ckpis").innerHTML=[
+    {l:"Team sales (excl VAT)",v:fmt(tot.sales),m:REPS.length+" reps · monthly"},
+    {l:"Eligible commission",v:f2(tot.elig+refElig),m:"deals + referrals · on collection"},
+    {l:"Pending on collection",v:f2(tot.pend),m:"unlocks as clients pay"},
+    {l:"Total earned",v:f2(tot.comm+refEarn),m:"before collection gating"},
+  ].map(c=>`<div class="kpi"><div class="lbl">${c.l}</div><div class="val tnum">${c.v}</div><div class="meta">${c.m}</div></div>`).join("");
+  ROOTFLASH();
+}
+function ROOTFLASH(){ const k=$("ckpis"); if(k) k.querySelectorAll(".kpi").forEach(x=>{x.classList.remove("flash");void x.offsetWidth;x.classList.add("flash");}); }
+
+function renderTabs(){
+  $("repTabs").innerHTML=REPS.map((r,i)=>{const R=repRoll(r);return `<div class="reptab ${i===sel?'active':''}" data-i="${i}">${r.name}<span class="t">${pct(R.attain,0)}</span></div>`;}).join("")
+    +`<div class="reptab" id="addRepTab" style="border-style:dashed">+ Rep</div>`;
+  $("repTabs").querySelectorAll(".reptab[data-i]").forEach(t=>t.addEventListener("click",()=>{sel=+t.dataset.i;plansOpen.clear();renderAll();}));
+  $("addRepTab").addEventListener("click",()=>{REPS.push({name:"New rep",target:270000,deals:[]});sel=REPS.length-1;plansOpen.clear();renderAll();});
+}
+function renderRep(){
+  const r=REPS[sel]; if(!r){$("repBar").innerHTML="";$("dealsBody").innerHTML="";$("dealsFoot").innerHTML="";$("payoutProj").innerHTML="";$("accelBox").innerHTML="";return;}
+  const R=repRoll(r), onTrack=R.attain>=1;
+  $("repBar").innerHTML=`
+    <div class="f"><label>Rep</label><input id="rep_name" value="${r.name}" style="text-align:left;font-family:Inter;color:var(--text);width:150px"></div>
+    <div class="f"><label>Monthly target</label><input id="rep_target" type="number" value="${r.target}"></div>
+    <div class="f"><label>Min sales (${pct(RULES.thr,0)})</label><div class="v tnum">${fmt(R.minReq)}</div></div>
+    <div class="grow"></div>
+    <div class="f"><label>Credited</label><div class="v tnum">${fmt(R.tgt)} · <span style="color:${onTrack?'var(--pos)':'var(--warn)'}">${pct(R.attain,0)}</span></div></div>
+    <div class="f"><label>Eligible</label><div class="v tnum" style="color:var(--pos)">${f2(R.eligible)}</div></div>
+    <div class="repacts">
+      <button class="btn sm primary" id="rep_pdf">⤓ Statement PDF</button>
+      <button class="btn sm" id="rep_email">✉ Email</button>
+      <button class="btn sm danger" id="rep_del">Delete rep</button>
+    </div>`;
+  $("rep_name").addEventListener("input",e=>{r.name=e.target.value;renderTabs();renderSummary();});
+  $("rep_target").addEventListener("change",e=>{r.target=parseFloat(e.target.value)||0;renderAll();});
+  $("rep_pdf").addEventListener("click",()=>repPDF(r));
+  $("rep_email").addEventListener("click",()=>emailRep(r));
+  $("rep_del").addEventListener("click",()=>{
+    if(REPS.length<=1){alert("Keep at least one rep.");return;}
+    if(!confirm("Delete "+r.name+"?"))return;
+    REPS.splice(sel,1); sel=Math.max(0,sel-1); plansOpen.clear(); renderAll();
+  });
+
+  let body="",tot={ex:0,comm:0,elig:0,pend:0}; const gated=R.gated;
+  r.deals.forEach((d,i)=>{
+    const c=dealCalc(d); const elig=gated?0:c.elig, pend=gated?0:c.pend;
+    tot.ex+=c.ex;tot.comm+=c.comm;tot.elig+=elig;tot.pend+=pend;
+    const planActive=d.future&&d.plan&&d.plan.length;
+    const collCell = planActive
+      ? `<span class="collauto" title="from payment plan">${pct(c.coll,0)} auto</span>`
+      : `<input class="d-in coll" data-k="coll" type="number" step="0.05" value="${d.coll}">`;
+    body+=`<tr data-i="${i}">
+      <td class="l"><select class="d-sel" data-k="type"><option ${d.type==='B2C'?'selected':''}>B2C</option><option ${d.type==='B2B'?'selected':''}>B2B</option></select></td>
+      <td class="l"><input class="d-in cust" data-k="cust" value="${d.cust}"></td>
+      <td><input class="d-in" data-k="gross" type="number" value="${d.gross}"></td>
+      <td class="d-der">${fmt(c.ex)}</td>
+      <td class="l"><select class="d-sel" data-k="tag">${tagOpts(d.tag)}</select></td>
+      <td class="d-der">${pct(c.appl,2)}</td><td class="d-der">${f2(c.comm)}</td>
+      <td>${collCell}</td>
+      <td class="d-der elig">${f2(elig)}</td><td class="d-der pend">${f2(pend)}</td>
+      <td class="l"><input class="d-in month" data-k="month" value="${d.month||''}"></td>
+      <td style="text-align:center"><input type="checkbox" data-k="future" ${d.future?'checked':''}> <button class="planbtn ${plansOpen.has(i)?'on':''}" data-plan="${i}" ${d.future?'':'style="display:none"'}>plan</button></td>
+      <td><button class="del" data-i="${i}">×</button></td></tr>`;
+    if(plansOpen.has(i)&&d.future){ body+=planEditor(d,i); }
+  });
+  $("dealsBody").innerHTML=body||`<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:18px">No deals — add the rep's first deal below.</td></tr>`;
+  $("dealsFoot").innerHTML=r.deals.length?`<tr><td class="l">Totals</td><td></td><td></td><td>${fmt(tot.ex)}</td><td></td><td></td><td>${f2(tot.comm)}</td><td></td><td style="color:var(--pos)">${f2(tot.elig)}</td><td style="color:var(--pend)">${f2(tot.pend)}</td><td></td><td></td><td></td></tr>`:"";
+  bindDeals(r);
+
+  // projection
+  const proj=repProjection(r);
+  $("payoutProj").innerHTML = proj.length ? `<div class="proj"><div class="ph">Monthly payout projection — from future payment plans</div><table><tbody>`+
+    proj.map(p=>`<tr><td class="l">${ymLabel(p.ym)}</td><td class="r">AED ${f2(p.amt)}</td></tr>`).join("")+
+    `<tr><td class="l" style="font-weight:700">Total projected</td><td class="r" style="font-weight:700">AED ${f2(proj.reduce((a,p)=>a+p.amt,0))}</td></tr></tbody></table></div>` : "";
+
+  const abox = R.gated
+    ? `<div class="accel" style="border-color:var(--warn);background:#FBEFE9"><b>Below minimum (${pct(RULES.thr,0)} of target).</b> Credited ${fmt(R.tgt)} vs minimum ${fmt(R.minReq)} — no commission payable this month.</div>`
+    : R.accelEarned>0
+    ? `<div class="accel on"><b>Accelerator unlocked.</b> Credited ${fmt(R.tgt)} (${pct(R.attain,0)}). Bonus on excess above 100%: <b>${f2(R.accelEarned)} AED</b> earned, <b>${f2(R.accelElig)} AED</b> eligible after ${pct(R.blendColl,0)} blended collection.</div>`
+    : `<div class="accel">Between ${pct(RULES.thr,0)} and 100% — per-deal base commission applies. Accelerator activates above ${fmt(r.target)}.</div>`;
+  $("accelBox").innerHTML=abox;
+}
+function planEditor(d,i){
+  const total=(d.plan||[]).reduce((a,p)=>a+(p.pct||0),0);
+  const comm=dealCalc(d).comm;
+  let rows=(d.plan||[]).map((p,j)=>`
+    <div class="plan-inst" data-j="${j}">
+      <input type="date" data-pk="date" value="${p.date||''}">
+      <input type="number" data-pk="pct" step="1" value="${Math.round((p.pct||0)*100)}"><span style="color:var(--muted);font-size:12px">%</span>
+      <span class="pamt">→ AED ${f2(comm*(p.pct||0))}</span>
+      <button class="del" data-pdel="${j}" style="font-size:14px">×</button>
+    </div>`).join("");
+  const ok=Math.abs(total-1)<1e-6;
+  return `<tr class="planrow" data-i="${i}"><td colspan="13"><div class="planbox">
+    <h4>Payment plan — ${d.cust} <span style="color:var(--muted);font-weight:400">(commission AED ${f2(comm)} spread across installments)</span></h4>
+    ${rows||'<div style="color:var(--muted);font-size:12px;margin-bottom:6px">No installments yet.</div>'}
+    <button class="btn sm" data-padd="${i}">+ Installment</button>
+    <div class="plan-sum">Scheduled: <b class="${ok?'':'bad'}">${Math.round(total*100)}%</b>${ok?'':' — should total 100%'} · collected to date <b>${pct(effColl(d),0)}</b></div>
+  </div></td></tr>`;
+}
+function bindDeals(r){
+  $("dealsBody").querySelectorAll("tr[data-i] > td [data-k]").forEach(el=>{
+    const isLive = el.tagName==="SELECT"||el.type==="checkbox";
+    el.addEventListener(isLive?"change":"change",e=>{
+      const tr=e.target.closest("tr[data-i]"); const i=+tr.dataset.i,k=e.target.dataset.k,d=r.deals[i];
+      if(k==="type"||k==="tag"||k==="cust"||k==="month")d[k]=e.target.value;
+      else if(k==="future"){ d.future=e.target.checked; if(d.future){ if(!d.plan||!d.plan.length){ d.plan=[{date:todayISO(),pct:0.2},{date:addDaysISO(30),pct:0.5},{date:addDaysISO(60),pct:0.3}]; } plansOpen.add(i);} else { plansOpen.delete(i);} }
+      else d[k]=parseFloat(e.target.value)||0;
+      renderRep(); renderSummary(); publishStore();
+    });
+  });
+  $("dealsBody").querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",e=>{
+    const i=+e.target.dataset.plan; if(plansOpen.has(i))plansOpen.delete(i);else plansOpen.add(i); renderRep();
+  }));
+  $("dealsBody").querySelectorAll(".del[data-i]").forEach(b=>b.addEventListener("click",e=>{r.deals.splice(+e.target.dataset.i,1);plansOpen.clear();renderRep();renderSummary();publishStore();}));
+  // plan editor bindings
+  $("dealsBody").querySelectorAll(".planrow").forEach(pr=>{
+    const i=+pr.dataset.i, d=r.deals[i];
+    pr.querySelectorAll(".plan-inst").forEach(inst=>{
+      const j=+inst.dataset.j;
+      inst.querySelectorAll("[data-pk]").forEach(el=>el.addEventListener("change",e=>{
+        const pk=e.target.dataset.pk;
+        if(pk==="pct")d.plan[j].pct=(parseFloat(e.target.value)||0)/100; else d.plan[j][pk]=e.target.value;
+        renderRep();renderSummary();publishStore();
+      }));
+      inst.querySelector("[data-pdel]")?.addEventListener("click",()=>{d.plan.splice(j,1);renderRep();renderSummary();publishStore();});
+    });
+    pr.querySelector("[data-padd]")?.addEventListener("click",()=>{d.plan.push({date:addDaysISO(30),pct:0});renderRep();});
+  });
+}
+
+function renderRefs(){
+  let body="",tot={ex:0,comm:0,elig:0};
+  REFS.forEach((r,i)=>{
+    const ex=r.gross*(1-RULES.vat),comm=ex*RULES.ref,elig=comm*(r.coll||0); tot.ex+=ex;tot.comm+=comm;tot.elig+=elig;
+    body+=`<tr data-i="${i}"><td class="l"><input class="d-in cust" data-k="cust" value="${r.cust}"></td>
+      <td><input class="d-in" data-k="gross" type="number" value="${r.gross}"></td><td class="d-der">${fmt(ex)}</td>
+      <td class="d-der">${pct(RULES.ref)}</td><td class="d-der">${f2(comm)}</td>
+      <td><input class="d-in coll" data-k="coll" type="number" step="0.05" value="${r.coll}"></td>
+      <td class="d-der elig">${f2(elig)}</td><td class="l"><input class="d-in month" data-k="month" value="${r.month||''}"></td>
+      <td><button class="del" data-i="${i}">×</button></td></tr>`;
+  });
+  $("refBody").innerHTML=body||`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No referrals.</td></tr>`;
+  $("refFoot").innerHTML=REFS.length?`<tr><td class="l">Totals</td><td></td><td>${fmt(tot.ex)}</td><td></td><td>${f2(tot.comm)}</td><td></td><td style="color:var(--pos)">${f2(tot.elig)}</td><td></td><td></td></tr>`:"";
+  $("refBody").querySelectorAll("[data-k]").forEach(el=>el.addEventListener("change",e=>{
+    const i=+e.target.closest("tr").dataset.i,k=e.target.dataset.k;
+    if(k==="cust"||k==="month")REFS[i][k]=e.target.value; else REFS[i][k]=parseFloat(e.target.value)||0;
+    renderRefs();renderSummary();
+  }));
+  $("refBody").querySelectorAll(".del").forEach(b=>b.addEventListener("click",e=>{REFS.splice(+e.target.dataset.i,1);renderRefs();renderSummary();}));
+}
+
+function publishStore(){
+  const deals=[];
+  REPS.forEach(r=>r.deals.forEach(d=>deals.push({rep:r.name,customer:d.cust,gross:d.gross,collected:effColl(d),month:d.month||"",future:!!d.future})));
+  window.CoreVStore={deals,ts:Date.now()}; window.dispatchEvent(new CustomEvent('corev:store'));
+}
+function renderAll(){ renderMatrix(); renderSummary(); renderTabs(); renderRep(); renderRefs(); publishStore(); }
+
+/* ---------- HubSpot ---------- */
+function monthFromISO(s){ if(!s)return""; const d=new Date(s); if(isNaN(d))return""; return MON[d.getMonth()]+"/"+String(d.getFullYear()).slice(2); }
+function findRep(name){ if(!name)return null; return REPS.find(r=>r.name.toLowerCase()===name.toLowerCase()); }
+function pushHubDeal(rep,{hsId,cust,amount,month}){
+  if(hsId){ const ex=rep.deals.find(d=>d.hsId===hsId); if(ex){ ex.gross=amount||0; ex.cust=cust||ex.cust; ex.month=month||ex.month; return false; } }
+  rep.deals.push({type:"B2B",cust:cust||"HubSpot deal",gross:amount||0,tag:"FULL",coll:0,month:month||"",future:false,plan:[],hsId:hsId||null}); return true;
+}
+function addHubDeal(cust,amount,owner,month,assign){
+  let rep;
+  if(assign==="__owner"&&owner){ rep=findRep(owner); if(!rep){ rep={name:owner,target:270000,deals:[]}; REPS.push(rep);} }
+  else { rep=REPS[sel]||REPS[0]; }
+  pushHubDeal(rep,{cust,amount,month});
+}
+
+/* ---- HubSpot live via Cloudflare Worker proxy (inherited from Sales Tracker) ---- */
+const HS_KEYS={proxy:"corev_hs_proxy",token:"corev_hs_token",map:"corev_hs_ownermap"};
+let HS={proxy:"",token:"",owners:[],ownerMap:{}};
+function hsLoad(){ try{ HS.proxy=localStorage.getItem(HS_KEYS.proxy)||""; HS.token=localStorage.getItem(HS_KEYS.token)||""; HS.ownerMap=JSON.parse(localStorage.getItem(HS_KEYS.map)||"{}"); }catch(_){ } }
+function hsPersist(){ try{ localStorage.setItem(HS_KEYS.proxy,HS.proxy); localStorage.setItem(HS_KEYS.token,HS.token); localStorage.setItem(HS_KEYS.map,JSON.stringify(HS.ownerMap)); }catch(_){ } }
+function hsStatus(msg,kind){ const el=$("hs_status"); if(!el)return; el.className="hub-status"+(kind?" "+kind:""); el.innerHTML=msg; }
+function hsUrl(path){ const b=(HS.proxy||"").trim().replace(/\/+$/,""); return b?b+path:null; }
+async function hsApi(path,opts={}){
+  if(!HS.token) throw new Error("Paste your Private App token first.");
+  const url=path.startsWith("http")?path:hsUrl(path);
+  if(!url) throw new Error("Set the Cloudflare Worker proxy URL first (HubSpot blocks direct browser calls).");
+  const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{}),"Authorization":"Bearer "+HS.token}});
+  if(r.status===401) throw new Error("Token rejected (401) — check the Private App token.");
+  if(!r.ok){ const t=await r.text();
+    if(r.status===403&&/MISSING_SCOPES|required scopes/i.test(t)) throw new Error("Private App missing a read scope — add crm.objects.deals.read &amp; crm.objects.owners.read in HubSpot, save, retry.");
+    throw new Error("HubSpot "+r.status+": "+t.slice(0,160)); }
+  return r.json();
+}
+async function hsConnect(){
+  HS.proxy=$("hs_proxy").value.trim(); HS.token=$("hs_token").value.trim();
+  if(!HS.token||!/^pat-/i.test(HS.token)){ hsStatus("That doesn't look like a Private App token (it should start with <code>pat-</code>).","err"); return; }
+  if(!HS.proxy){ hsStatus("Enter your Cloudflare Worker proxy URL — HubSpot blocks direct browser calls. Click <b>Worker setup</b>.","err"); return; }
+  hsStatus("Testing connection…");
+  try{ await hsApi("/crm/v3/owners?limit=1"); hsPersist(); hsStatus("Connected ✓ — loading owners so you can map them to your reps.","ok"); await hsLoadOwners(); }
+  catch(e){ hsStatus("Connection failed: "+e.message,"err"); }
+}
+async function hsLoadOwners(){
+  if(!HS.token||!HS.proxy){ hsStatus("Enter the proxy URL and token, then Connect.","err"); return; }
+  hsStatus("Loading HubSpot owners…");
+  try{
+    const all=[]; let after=null,guard=0;
+    do{ const data=await hsApi("/crm/v3/owners?limit=100"+(after?"&after="+encodeURIComponent(after):""));
+        (data.results||[]).forEach(o=>all.push({id:o.id,email:o.email||"",name:((o.firstName||"")+" "+(o.lastName||"")).trim()||o.email||"(unnamed)"}));
+        after=data.paging&&data.paging.next&&data.paging.next.after; guard++; }while(after&&guard<10);
+    all.sort((a,b)=>a.name.localeCompare(b.name)); HS.owners=all; hsRenderOwnerMap();
+    hsStatus("Loaded "+all.length+" owners. Map each rep to a HubSpot owner, then fetch.","ok");
+  }catch(e){ hsStatus("Could not load owners: "+e.message,"err"); }
+}
+function hsRenderOwnerMap(){
+  const box=$("hs_ownermap"); if(!box)return; if(!HS.owners.length){ box.innerHTML=""; return; }
+  const opts=s=>'<option value="">— not mapped —</option>'+HS.owners.map(o=>`<option value="${o.id}" ${o.id===s?"selected":""}>${o.name}${o.email?" ("+o.email+")":""}</option>`).join("");
+  box.innerHTML=REPS.map(r=>`<div class="hs-ownerrow"><span>${r.name}</span><span style="color:var(--muted)">→</span><select class="d-sel" data-rep="${r.name}">${opts(HS.ownerMap[r.name]||"")}</select></div>`).join("");
+  box.querySelectorAll("select[data-rep]").forEach(s=>s.addEventListener("change",e=>{const rep=e.target.dataset.rep,v=e.target.value; if(v)HS.ownerMap[rep]=v; else delete HS.ownerMap[rep]; hsPersist();}));
+}
+async function hsFetchClosedWon(){
+  if(!HS.token||!HS.proxy){ hsStatus("Connect first.","err"); return; }
+  const mapped=REPS.filter(r=>HS.ownerMap[r.name]);
+  if(!mapped.length){ hsStatus("Map at least one rep to a HubSpot owner first (Load owners).","err"); return; }
+  hsStatus("Fetching closed-won deals…"); let total=0,added=0;
+  try{
+    for(const rep of mapped){
+      const ownerId=HS.ownerMap[rep.name]; let after,guard=0;
+      do{
+        const body={filterGroups:[{filters:[{propertyName:"hubspot_owner_id",operator:"EQ",value:ownerId},{propertyName:"dealstage",operator:"NEQ",value:"closedlost"}]}],
+          properties:["dealname","amount","closedate","dealstage","hs_is_closed_won","hs_is_closed"],sorts:[{propertyName:"closedate",direction:"DESCENDING"}],limit:100};
+        if(after)body.after=after;
+        const data=await hsApi("/crm/v3/objects/deals/search",{method:"POST",body:JSON.stringify(body)});
+        (data.results||[]).forEach(d=>{ const p=d.properties||{}; const rs=(p.dealstage||"").toLowerCase();
+          const won=p.hs_is_closed_won==="true"||rs==="closedwon"||rs.includes("closed won"); if(!won)return; total++;
+          if(pushHubDeal(rep,{hsId:d.id,cust:p.dealname,amount:parseFloat(p.amount)||0,month:monthFromISO(p.closedate)})) added++;
+        });
+        after=data.paging&&data.paging.next&&data.paging.next.after; guard++;
+      }while(after&&guard<50);
+    }
+    hsStatus(`Fetched ${total} closed-won deal${total===1?"":"s"} across ${mapped.length} rep${mapped.length===1?"":"s"} (${added} new, rest updated).`,"ok");
+    renderAll();
+  }catch(e){ hsStatus("Fetch failed: "+e.message,"err"); }
+}
+const HS_WORKER=`export default {
+  async fetch(request) {
+    const cors = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Authorization,Content-Type'};
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+    const url = new URL(request.url);
+    const upstream = await fetch('https://api.hubapi.com' + url.pathname + url.search, {
+      method: request.method,
+      headers: { 'Authorization': request.headers.get('Authorization') || '', 'Content-Type': 'application/json' },
+      body: ['GET','HEAD'].includes(request.method) ? undefined : await request.text()
+    });
+    const body = await upstream.text();
+    return new Response(body, { status: upstream.status, headers: { ...cors, 'Content-Type': 'application/json' } });
+  }
+};`;
+function hsToggleWorker(){ const b=$("hs_workerbox"); b.style.display=b.style.display==="none"?"block":"none"; if(b.style.display==="block")$("hs_workercode").textContent=HS_WORKER; }
+function hsCopyWorker(){ navigator.clipboard.writeText(HS_WORKER).then(()=>{const b=$("hs_copyworker"),o=b.textContent;b.textContent="✓ Copied";setTimeout(()=>b.textContent=o,1500);}); }
+function parseCSV(text){
+  const rows=[];let i=0,f="",row=[],q=false;
+  while(i<text.length){const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;}else q=false; } else f+=c; }
+    else { if(c==='"')q=true; else if(c===',') {row.push(f);f="";} else if(c==='\n'){row.push(f);rows.push(row);row=[];f="";} else if(c==='\r'){} else f+=c; }
+    i++;
+  }
+  if(f.length||row.length){row.push(f);rows.push(row);}
+  return rows.filter(r=>r.length>1||(r.length===1&&r[0].trim()!==""));
+}
+function colIdx(headers,names){ for(const n of names){ const k=headers.findIndex(h=>h.trim().toLowerCase()===n); if(k>=0)return k; } 
+  for(const n of names){ const k=headers.findIndex(h=>h.trim().toLowerCase().includes(n)); if(k>=0)return k; } return -1; }
+function importCSVText(text){
+  const rows=parseCSV(text); if(rows.length<2){$("hs_status").className="hub-status err";$("hs_status").textContent="No rows found in CSV.";return;}
+  const H=rows[0]; const ci={
+    name:colIdx(H,["deal name","dealname","deal"]), amt:colIdx(H,["amount","deal amount","close amount","value"]),
+    owner:colIdx(H,["deal owner","owner","hubspot owner"]), date:colIdx(H,["close date","closedate"]), stage:colIdx(H,["deal stage","dealstage","stage"]),
+  };
+  const assign="__owner"; let n=0;
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r]; if(!row||row.length<2)continue;
+    const stage=(ci.stage>=0?row[ci.stage]:"").toLowerCase();
+    if(ci.stage>=0 && stage && !(stage.includes("won")||stage.includes("closed won")||stage.includes("closedwon"))) continue;
+    const amt=parseFloat(String(ci.amt>=0?row[ci.amt]:"0").replace(/[^0-9.\-]/g,""))||0;
+    if(!amt)continue;
+    addHubDeal(ci.name>=0?row[ci.name]:"", amt, ci.owner>=0?row[ci.owner]:"", ci.date>=0?monthFromISO(row[ci.date]):"", assign);
+    n++;
+  }
+  $("hs_status").className="hub-status ok"; $("hs_status").textContent=`Imported ${n} closed deal${n===1?"":"s"} from CSV.`;
+  renderAll();
+}
+/* ---------- PDF ---------- */
+function pdfHeader(doc,title,right){
+  const W=doc.internal.pageSize.getWidth();
+  doc.setFillColor(14,22,38); doc.rect(0,0,W,76,"F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(22);
+  doc.setTextColor(255,255,255); doc.text("Core",40,44);
+  const wx=40+doc.getTextWidth("Core"); doc.setTextColor(127,160,255); doc.text("V",wx,44);
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(200,211,232); doc.text(title,40,62);
+  if(right){ doc.setFontSize(11); doc.setTextColor(255,255,255); doc.text(right,W-40,44,{align:"right"});
+    doc.setFontSize(9); doc.setTextColor(160,176,204); doc.text("Generated "+todayISO(),W-40,60,{align:"right"}); }
+}
+function pdfFooter(doc){
+  const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
+  doc.setDrawColor(226,230,238); doc.line(40,H-44,W-40,H-44);
+  doc.setFont("helvetica","italic"); doc.setFontSize(8.5); doc.setTextColor(150,160,175);
+  doc.text("This is an auto-generated document.",40,H-30);
+  doc.text("CoreV · MENA Finance Suite",W-40,H-30,{align:"right"});
+}
+function ready(){ return window.jspdf && window.jspdf.jsPDF; }
+function repPDF(r){
+  if(!ready()){alert("PDF engine still loading — try again in a second.");return;}
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:"pt",format:"a4"}); const W=doc.internal.pageSize.getWidth();
+  const R=repRoll(r);
+  pdfHeader(doc,"Sales Commission Statement",r.name);
+  let y=104;
+  doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(14,22,38);
+  doc.text("Monthly achievement",40,y); y+=8;
+  doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(70,80,100);
+  const info=[["Monthly target","AED "+fmt(r.target)],["Credited sales","AED "+fmt(R.tgt)+"  ("+pct(R.attain,0)+")"],
+    ["Eligible this month","AED "+f2(R.eligible)],["Pending on collection","AED "+f2(R.pending)]];
+  doc.autoTable({startY:y+4,theme:"plain",styles:{fontSize:10,cellPadding:3},
+    body:info,columnStyles:{0:{textColor:[110,118,136]},1:{halign:"right",fontStyle:"bold",textColor:[14,22,38]}}});
+  y=doc.lastAutoTable.finalY+18;
+  doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(14,22,38);doc.text("Deals",40,y);
+  const rows=r.deals.map(d=>{const c=dealCalc(d);const e=R.gated?0:c.elig;
+    return [d.cust,d.type,fmt(c.ex),d.tag,pct(c.appl,2),f2(c.comm),pct(c.coll,0),f2(e)];});
+  doc.autoTable({startY:y+6,head:[["Customer","Type","Excl VAT","Role","Appl %","Commission","Coll %","Eligible"]],
+    body:rows.length?rows:[["—","","","","","","",""]],styles:{fontSize:9,cellPadding:4},
+    headStyles:{fillColor:[27,38,56],textColor:[255,255,255],fontSize:8.5},
+    columnStyles:{2:{halign:"right"},5:{halign:"right"},7:{halign:"right",fontStyle:"bold",textColor:[17,122,78]}}});
+  y=doc.lastAutoTable.finalY+16;
+  const proj=repProjection(r);
+  if(proj.length){
+    doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(14,22,38);doc.text("Projected payout (future plan)",40,y);
+    doc.autoTable({startY:y+6,head:[["Month","Projected commission (AED)"]],
+      body:proj.map(p=>[ymLabel(p.ym),f2(p.amt)]),styles:{fontSize:9,cellPadding:4},
+      headStyles:{fillColor:[27,38,56],textColor:[255,255,255],fontSize:8.5},columnStyles:{1:{halign:"right"}}});
+  }
+  if(R.accelEarned>0){ const fy=doc.lastAutoTable.finalY+14;
+    doc.setFontSize(9.5);doc.setTextColor(17,122,78);
+    doc.text("Accelerator bonus (excess above 100%): AED "+f2(R.accelEarned)+" earned · "+f2(R.accelElig)+" eligible.",40,fy);
+  }
+  pdfFooter(doc);
+  doc.save("CoreV_Commission_"+r.name.replace(/\s+/g,"_")+".pdf");
+}
+function referralPDF(){
+  if(!ready()){alert("PDF engine still loading — try again in a second.");return;}
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:"pt",format:"a4"});
+  pdfHeader(doc,"Referral Commission Statement","Referrals");
+  let y=104; doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(14,22,38);doc.text("Referral deals",40,y);
+  let totE=0,totC=0;
+  const rows=REFS.map(r=>{const ex=r.gross*(1-RULES.vat),comm=ex*RULES.ref,elig=comm*(r.coll||0);totC+=comm;totE+=elig;
+    return [r.cust,fmt(ex),pct(RULES.ref),f2(comm),pct(r.coll||0,0),f2(elig)];});
+  doc.autoTable({startY:y+6,head:[["Customer","Excl VAT","Rate","Commission","Coll %","Eligible"]],
+    body:rows.length?rows:[["—","","","","",""]],styles:{fontSize:9,cellPadding:4},
+    headStyles:{fillColor:[27,38,56],textColor:[255,255,255],fontSize:8.5},
+    foot:[["Total","","","AED "+f2(totC),"","AED "+f2(totE)]],footStyles:{fillColor:[14,22,38],textColor:[255,255,255]},
+    columnStyles:{1:{halign:"right"},3:{halign:"right"},5:{halign:"right",fontStyle:"bold",textColor:[17,122,78]}}});
+  pdfFooter(doc);
+  doc.save("CoreV_Referrals.pdf");
+}
+function emailRep(r){
+  const R=repRoll(r);
+  const subject=encodeURIComponent("CoreV Commission Statement — "+r.name);
+  const body=encodeURIComponent("Hi "+r.name+",\n\nYour commission summary this month:\n"+
+    "Monthly target: AED "+fmt(r.target)+"\nCredited sales: AED "+fmt(R.tgt)+" ("+pct(R.attain,0)+")\n"+
+    "Eligible this month: AED "+f2(R.eligible)+"\nPending on collection: AED "+f2(R.pending)+"\n\n"+
+    "The detailed PDF statement has been downloaded — please attach it to this email before sending.\n\n— CoreV\n\nThis is an auto-generated message.");
+  repPDF(r);
+  window.location.href="mailto:?subject="+subject+"&body="+body;
+}
+function emailRef(){
+  let totE=0; REFS.forEach(r=>{totE+=r.gross*(1-RULES.vat)*RULES.ref*(r.coll||0);});
+  const subject=encodeURIComponent("CoreV Referral Commission Statement");
+  const body=encodeURIComponent("Hi,\n\nReferral commission eligible this month: AED "+f2(totE)+
+    "\n\nThe detailed PDF has been downloaded — please attach it before sending.\n\n— CoreV\n\nThis is an auto-generated message.");
+  referralPDF();
+  window.location.href="mailto:?subject="+subject+"&body="+body;
+}
+
+/* ---------- wiring ---------- */
+$("addDeal").addEventListener("click",()=>{REPS[sel].deals.push({type:"B2C",cust:"New customer",gross:0,tag:"FULL",coll:0,month:"",future:false,plan:[]});renderRep();renderSummary();publishStore();});
+$("addRef").addEventListener("click",()=>{REFS.push({cust:"New referral",gross:0,coll:0,month:""});renderRefs();renderSummary();});
+$("ref_pdf").addEventListener("click",referralPDF);
+$("ref_email").addEventListener("click",emailRef);
+$("hs_connect").addEventListener("click",hsConnect);
+$("hs_loadowners").addEventListener("click",hsLoadOwners);
+$("hs_fetch").addEventListener("click",hsFetchClosedWon);
+$("hs_worker").addEventListener("click",hsToggleWorker);
+$("hs_copyworker").addEventListener("click",hsCopyWorker);
+$("hs_import").addEventListener("click",()=>importCSVText($("hs_csv").value));
+$("hs_file").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>importCSVText(rd.result);rd.readAsText(f);});
+
+function bindRules(){
+  const map=[["r_vat","vat",100],["r_base","base",100],["r_thr","thr",100],["r_b","b",100],["r_a1","a1",100],["r_a2","a2",100],["r_ref","ref",100]];
+  map.forEach(([id,key])=>{const el=$(id);el.value=+(RULES[key]*100).toFixed(2);el.addEventListener("input",()=>{RULES[key]=(parseFloat(el.value)||0)/100;renderAll();});});
+}
+hsLoad();
+if($("hs_proxy"))$("hs_proxy").value=HS.proxy;
+if($("hs_token"))$("hs_token").value=HS.token;
+bindRules(); renderAll();
+
+})();</script>
+<script>(function(){
+
+"use strict";
+const ROOT = document.getElementById('tab-reminders');
+  const $ = id => ROOT.querySelector('#'+id);
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const today = new Date(); today.setHours(0,0,0,0);
+const DAY=86400000;
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+const iso=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0");};
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function parseMonth(s){
+  const map={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  const mm=(s||"").trim().toLowerCase().slice(0,3); const yr=(s||"").split("/")[1];
+  if(map[mm]!=null && yr){let y=parseInt(yr,10); y=y<100?2000+y:y; return new Date(y,map[mm],1);}
+  return new Date(today.getFullYear(),today.getMonth(),1);
+}
+
+let CTRL={soon:7, off:[0,30,60]};
+const MS=[["Acceptance",0.20],["PO / Contract",0.50],["Delivery",0.30]];
+let RECV_OV={};            // overrides keyed by milestone
+let PAY=[
+  {payee:"OxeFit", desc:"Hardware PO settlement", amount:150000, due:iso(addDays(today,17)), recur:"One-time", paid:false},
+  {payee:"OxeFit", desc:"Platform / subscription", amount:22000, due:iso(addDays(today,5)), recur:"Monthly", paid:false},
+  {payee:"Logistics partner", desc:"Inbound shipping", amount:9500, due:iso(addDays(today,-3)), recur:"One-time", paid:false},
+  {payee:"Marketing agency", desc:"Retainer", amount:18000, due:iso(addDays(today,28)), recur:"Monthly", paid:false},
+];
+
+function receivables(){
+  const store=(window.CoreVStore&&window.CoreVStore.deals)||[];
+  const rows=[];
+  store.forEach((d,di)=>{
+    if(!d.gross) return;
+    const anchor=parseMonth(d.month); let cum=0;
+    MS.forEach((ms,mi)=>{
+      const [name,pct]=ms; cum+=pct;
+      const key=d.customer+"|"+d.month+"|"+di+"|"+mi;
+      const ov=RECV_OV[key]||{};
+      const due = ov.due ? new Date(ov.due+"T00:00:00") : addDays(anchor,CTRL.off[mi]);
+      const autoPaid=(d.collected||0) >= cum-1e-9;
+      const paid = ov.paid!=null ? ov.paid : autoPaid;
+      rows.push({key,rep:d.rep,customer:d.customer,name,pct,amount:d.gross*pct,due,paid});
+    });
+  });
+  return rows;
+}
+function statusOf(due,paid){
+  if(paid) return "paid";
+  const days=Math.floor((due-today)/DAY);
+  if(days<0) return "over";
+  if(days<=CTRL.soon) return "soon";
+  return "up";
+}
+const STLBL={paid:"Paid",over:"Overdue",soon:"Due soon",up:"Upcoming"};
+
+function renderDashboard(){
+  const recv=receivables(), pay=PAY.map(p=>({...p,dueD:new Date(p.due+"T00:00:00")}));
+  const recvOut=recv.filter(r=>!r.paid), payOut=pay.filter(p=>!p.paid);
+  const recvSum=recvOut.reduce((a,r)=>a+r.amount,0);
+  const paySum=payOut.reduce((a,p)=>a+p.amount,0);
+  const overR=recvOut.filter(r=>statusOf(r.due,false)==="over").reduce((a,r)=>a+r.amount,0);
+  const overP=payOut.filter(p=>statusOf(p.dueD,false)==="over").reduce((a,p)=>a+p.amount,0);
+  const net=recvSum-paySum;
+  $("rm-kpis").innerHTML=[
+    {l:"Receivable outstanding",v:fmt(recvSum),m:recvOut.length+" milestones",c:"posv"},
+    {l:"Payable outstanding",v:fmt(paySum),m:payOut.length+" payments",c:""},
+    {l:"Net position",v:(net<0?"−":"")+fmt(Math.abs(net)),m:net>=0?"net inflow":"net outflow",c:net>=0?"posv":"neg"},
+    {l:"Overdue total",v:fmt(overR+overP),m:"in "+fmt(overR)+" · out "+fmt(overP),c:overR+overP>0?"neg":""},
+  ].map(k=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val tnum">${k.v}</div><div class="meta">${k.m}</div></div>`).join("");
+  ROOT.querySelectorAll("#rm-kpis .kpi").forEach(k=>{k.classList.remove("flash");void k.offsetWidth;k.classList.add("flash");});
+
+  renderTimeline(recvOut, payOut.map(p=>({...p,due:p.dueD})));
+  renderFlags(recvOut, payOut.map(p=>({...p,due:p.dueD})));
+}
+
+function renderTimeline(recv, pay){
+  const W=940,H=200,mB=26,mid=104;
+  const start=addDays(today,-14), end=addDays(today,90), span=end-start;
+  const sx=d=>{ const t=Math.max(start,Math.min(end,d)); return 46+((t-start)/span)*(W-70); };
+  let gl="";
+  let cur=new Date(today.getFullYear(),today.getMonth(),1);
+  for(let i=0;i<5;i++){ const mx=sx(cur); if(cur>=start&&cur<=end){
+      gl+=`<line x1="${mx}" y1="18" x2="${mx}" y2="${H-mB}" stroke="#EEF1F6"/>`;
+      gl+=`<text x="${mx}" y="${H-mB+15}" text-anchor="middle" font-size="9.5" fill="#9AA6B8" font-family="JetBrains Mono">${MONTHS[cur.getMonth()]} ${String(cur.getFullYear()).slice(2)}</text>`;
+    } cur=new Date(cur.getFullYear(),cur.getMonth()+1,1); }
+  const tx=sx(today);
+  const todayLine=`<line x1="${tx}" y1="14" x2="${tx}" y2="${H-mB}" stroke="var(--accent)" stroke-dasharray="3 3"/><text x="${tx}" y="11" text-anchor="middle" font-size="9" fill="var(--accent)" font-family="JetBrains Mono">today</text>`;
+  const axis=`<line x1="40" y1="${mid}" x2="${W-20}" y2="${mid}" stroke="#D9DEE8"/>`;
+  function dots(items,up){
+    return items.map((it,i)=>{
+      const over=statusOf(it.due,false)==="over";
+      const x=sx(it.due);
+      const lane=i%3;
+      const y= up ? mid-16-lane*22 : mid+16+lane*22;
+      const col= over ? "var(--warn)" : (up?"var(--in)":"var(--out)");
+      const label=(it.customer?it.customer+" · ":"")+(it.name||it.desc||"")+" — AED "+fmt(it.amount)+" — "+iso(it.due)+(over?" (OVERDUE)":"");
+      return `<line x1="${x}" y1="${mid}" x2="${x}" y2="${y}" stroke="${col}" stroke-width="1" opacity=".4"/>`+
+             `<circle cx="${x}" cy="${y}" r="5" fill="${col}"><title>${label}</title></circle>`;
+    }).join("");
+  }
+  $("rm-timeline").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cash timeline">${gl}${axis}${todayLine}${dots(recv,true)}${dots(pay,false)}</svg>`;
+}
+
+function renderFlags(recv, pay){
+  const all=[...recv.map(r=>({...r,kind:"in",label:r.customer+" · "+r.name})),
+             ...pay.map(p=>({...p,kind:"out",label:p.payee+" · "+p.desc}))];
+  const act=all.map(x=>({...x,st:statusOf(x.due,false)})).filter(x=>x.st==="over"||x.st==="soon")
+              .sort((a,b)=>a.due-b.due);
+  if(!act.length){ $("rm-flags").innerHTML=`<span class="flag none">Nothing overdue or due within ${CTRL.soon} days.</span>`; return; }
+  $("rm-flags").innerHTML=act.slice(0,8).map(x=>{
+    const cls=x.st==="over"?"over":"soon"; const col=x.st==="over"?"var(--warn)":"var(--pend)";
+    const dir=x.kind==="in"?"▸ in":"◂ out";
+    return `<span class="flag ${cls}"><span class="dot" style="background:${col}"></span>${x.label} <span class="amt">${dir} ${fmt(x.amount)}</span> · ${iso(x.due)}</span>`;
+  }).join("");
+}
+
+function renderRecv(){
+  const rows=receivables().sort((a,b)=>a.due-b.due);
+  let body="",out=0,paid=0;
+  rows.forEach(r=>{
+    const st=statusOf(r.due,r.paid); if(r.paid) paid+=r.amount; else out+=r.amount;
+    body+=`<tr data-key="${r.key}">
+      <td class="l nm">${r.customer}</td>
+      <td class="l" style="color:var(--muted)">${r.rep||""}</td>
+      <td class="l"><span class="ms">${r.name} · ${Math.round(r.pct*100)}%</span></td>
+      <td>${fmt(r.amount)}</td>
+      <td class="l"><input class="rm-in date" type="date" data-k="due" value="${iso(r.due)}"></td>
+      <td><span class="st ${st}">${STLBL[st]}</span></td>
+      <td><input type="checkbox" data-k="paid" ${r.paid?"checked":""}></td>
+    </tr>`;
+  });
+  $("rm-recvBody").innerHTML=body || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px">No customer deals in the Commission tab yet. Add a deal there and it appears here.</td></tr>`;
+  $("rm-recvFoot").innerHTML=rows.length?`<tr><td class="l">Outstanding ${fmt(out)} · collected ${fmt(paid)}</td><td></td><td></td><td>${fmt(out+paid)}</td><td></td><td></td><td></td></tr>`:"";
+  $("rm-recvBody").querySelectorAll("[data-k]").forEach(el=>{
+    el.addEventListener(el.type==="checkbox"?"change":"input",e=>{
+      const key=e.target.closest("tr").dataset.key,k=e.target.dataset.k;
+      RECV_OV[key]=RECV_OV[key]||{};
+      RECV_OV[key][k]= k==="paid"? e.target.checked : e.target.value;
+      renderRecv(); renderDashboard();
+    });
+  });
+}
+
+function renderPay(){
+  let body="",out=0;
+  PAY.forEach((p,i)=>{
+    const due=new Date(p.due+"T00:00:00"); const st=statusOf(due,p.paid); if(!p.paid) out+=p.amount;
+    body+=`<tr data-i="${i}">
+      <td class="l"><input class="rm-in txt" data-k="payee" value="${p.payee}"></td>
+      <td class="l"><input class="rm-in txt" data-k="desc" value="${p.desc}"></td>
+      <td><input class="rm-in amt" type="number" data-k="amount" value="${p.amount}"></td>
+      <td class="l"><input class="rm-in date" type="date" data-k="due" value="${p.due}"></td>
+      <td class="l"><select class="rm-sel" data-k="recur"><option ${p.recur==="One-time"?"selected":""}>One-time</option><option ${p.recur==="Monthly"?"selected":""}>Monthly</option><option ${p.recur==="Quarterly"?"selected":""}>Quarterly</option></select></td>
+      <td><span class="st ${st}">${STLBL[st]}</span></td>
+      <td><input type="checkbox" data-k="paid" ${p.paid?"checked":""}></td>
+      <td><button class="del" data-i="${i}">×</button></td>
+    </tr>`;
+  });
+  $("rm-payBody").innerHTML=body || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">No payables.</td></tr>`;
+  $("rm-payFoot").innerHTML=PAY.length?`<tr><td class="l">Outstanding</td><td></td><td>${fmt(out)}</td><td></td><td></td><td></td><td></td><td></td></tr>`:"";
+  $("rm-payBody").querySelectorAll("[data-k]").forEach(el=>{
+    el.addEventListener(el.type==="checkbox"||el.tagName==="SELECT"?"change":"input",e=>{
+      const i=+e.target.closest("tr").dataset.i,k=e.target.dataset.k;
+      if(k==="amount") PAY[i][k]=parseFloat(e.target.value)||0;
+      else if(k==="paid") PAY[i][k]=e.target.checked;
+      else PAY[i][k]=e.target.value;
+      renderPay(); renderDashboard();
+    });
+  });
+  $("rm-payBody").querySelectorAll(".del").forEach(b=>b.addEventListener("click",e=>{PAY.splice(+e.target.dataset.i,1);renderPay();renderDashboard();}));
+}
+
+function syncedNote(){
+  const n=((window.CoreVStore&&window.CoreVStore.deals)||[]).filter(d=>d.gross).length;
+  $("rm-synced").innerHTML=`Synced <b>${n}</b> customer deal${n===1?"":"s"} from Commission`;
+}
+function renderAll(){ syncedNote(); renderDashboard(); renderRecv(); renderPay(); }
+
+$("rm-addPay").addEventListener("click",()=>{PAY.push({payee:"New payee",desc:"",amount:0,due:iso(addDays(today,14)),recur:"One-time",paid:false});renderPay();renderDashboard();});
+$("rm-resync").addEventListener("click",renderAll);
+[["rm_soon","soon"]].forEach(()=>{});
+$("rm_soon").value=CTRL.soon; $("rm_off1").value=CTRL.off[0]; $("rm_off2").value=CTRL.off[1]; $("rm_off3").value=CTRL.off[2];
+$("rm_soon").addEventListener("input",e=>{CTRL.soon=parseInt(e.target.value)||0;renderAll();});
+$("rm_off1").addEventListener("input",e=>{CTRL.off[0]=parseInt(e.target.value)||0;renderAll();});
+$("rm_off2").addEventListener("input",e=>{CTRL.off[1]=parseInt(e.target.value)||0;renderAll();});
+$("rm_off3").addEventListener("input",e=>{CTRL.off[2]=parseInt(e.target.value)||0;renderAll();});
+window.addEventListener("corev:store",renderAll);
+
+renderAll();
+
+})();</script>
+</body>
+</html>
