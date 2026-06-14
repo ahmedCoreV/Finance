@@ -560,13 +560,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.12.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.13.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.12.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.13.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -1463,60 +1463,101 @@ function addDealLine(){
 
 function dealPDF(){
   if(!DEAL.items.length){ alert("Add at least one line item first."); return; }
-  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:"pt",format:"a4"});
-  const W=doc.internal.pageSize.getWidth();
-  doc.setFillColor(255,255,255); doc.rect(0,0,W,84,"F");
-  try{ if(window.COREV_LOGO) doc.addImage(window.COREV_LOGO,"PNG",40,20,96,40); }catch(_){}
-  doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(14,22,38); doc.text("Deal quote",40,77);
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:"pt",format:"a4",orientation:"landscape"});
+  const W=doc.internal.pageSize.getWidth(), M=40, CW=W-2*M;
   const dateStr=new Date().toISOString().slice(0,10);
-  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(120,130,150); doc.text("Generated "+dateStr,W-40,40,{align:"right"});
-  doc.setDrawColor(59,91,219); doc.setLineWidth(2); doc.line(40,84,W-40,84);
 
+  // header band + logo
+  doc.setFillColor(255,255,255); doc.rect(0,0,W,70,"F");
+  try{ if(window.COREV_LOGO) doc.addImage(window.COREV_LOGO,"PNG",M,15,90,37); }catch(_){}
+  doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(14,22,38); doc.text("Deal quote",M+104,42);
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(120,130,150); doc.text("Generated "+dateStr,W-M,42,{align:"right"});
+  doc.setDrawColor(59,91,219); doc.setLineWidth(2); doc.line(M,62,W-M,62);
+
+  // totals
   let tot={sell:0,netRev:0,oxe:0,gross:0,corev:0,net:0,units:0};
-  const rows=DEAL.items.map(item=>{ const c=dealLineCalc(item); if(!c)return null;
+  const splits=[];
+  const body=DEAL.items.map(item=>{ const c=dealLineCalc(item); if(!c)return null;
     tot.sell+=c.lineSell;tot.netRev+=c.lineNetRev;tot.oxe+=c.lineOxe;tot.gross+=c.lineGross;tot.corev+=c.lineCorev;tot.net+=c.lineNet;tot.units+=c.qty;
-    return [c.row.name, String(c.qty), fmt(c.unitSell), fmt(c.unitDisc), fmt(c.lineNetRev), fmt(c.lineOxe), fmt(c.lineGross)+" ("+pct(c.grossPct)+")", fmt(c.lineNet)+" ("+pct(c.netPct)+")"];
+    const oxeW=c.lineNetRev>0?Math.max(0,(c.lineOxe/c.lineNetRev)*100):0;
+    const corevW=c.lineNetRev>0?Math.max(0,(c.lineCorev/c.lineNetRev)*100):0;
+    const netW=Math.max(0,100-oxeW-corevW);
+    splits.push({oxeW,corevW,netW});
+    const thin=c.netPct<0.27;
+    return [ c.row.name+"\n"+c.row.sku, String(c.qty), fmt(c.unitSell), fmt(c.unitDisc), fmt(c.lineNetRev), fmt(c.lineOxe),
+      {content:fmt(c.lineGross)+"  "+pct(c.grossPct), styles:{textColor:[17,122,78]}},
+      fmt(c.lineCorev),
+      {content:fmt(c.lineNet)+"  "+pct(c.netPct), styles:{textColor: thin?[192,73,43]:[17,122,78]}},
+      "" ];
   }).filter(Boolean);
   const freeUnits=Math.max(0, DEAL.freeUnits||0);
   const avgOxe=tot.units>0?tot.oxe/tot.units:0, freeCost=freeUnits*avgOxe, netAfter=tot.net-freeCost;
   const gP=tot.netRev?tot.gross/tot.netRev:0, nP=tot.sell?netAfter/tot.sell:0;
 
-  doc.autoTable({
-    startY:100,
-    head:[["Line item","Qty","Unit price","Unit disc","Net revenue","OxeFit cost","Gross profit","Net profit"]],
-    body:rows,
-    foot:[["Deal total"+(DEAL.extra?" · "+pct(DEAL.extra)+" disc":""), String(tot.units), "", "", fmt(tot.netRev), fmt(tot.oxe), fmt(tot.gross)+" ("+pct(gP)+")", fmt(tot.net)]],
-    styles:{font:"helvetica",fontSize:8,cellPadding:4,textColor:[20,30,50]},
-    headStyles:{fillColor:[14,22,38],textColor:[255,255,255],fontStyle:"bold"},
-    footStyles:{fillColor:[240,243,250],textColor:[14,22,38],fontStyle:"bold"},
-    columnStyles:{0:{halign:"left",cellWidth:150},1:{halign:"right"},2:{halign:"right"},3:{halign:"right"},4:{halign:"right"},5:{halign:"right"},6:{halign:"right"},7:{halign:"right"}},
-    margin:{left:40,right:40}
-  });
-
-  let y=doc.lastAutoTable.finalY+22;
-  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(14,22,38); doc.text("Deal summary",40,y);
-  const sumRows=[
-    ["Deal net revenue", fmt(tot.netRev)+" AED"],
-    ["OxeFit cost", fmt(tot.oxe)+" AED"],
-    ["Gross profit", fmt(tot.gross)+" AED ("+pct(gP)+")"],
-    ["CoreV cost (commission + referral + ops · "+pct(G.comm+G.ref+G.op)+")", fmt(tot.corev)+" AED"],
-    ["Net profit (before give-away)", fmt(tot.net)+" AED"],
+  // KPI cards
+  const cards=[
+    ["DEAL NET REVENUE", fmt(tot.netRev), fmt(tot.units)+" unit"+(tot.units===1?"":"s")],
+    ["GROSS MARGIN", pct(gP), fmt(tot.gross)+" AED after OxeFit"],
+    ["NET MARGIN", pct(nP), fmt(netAfter)+" AED CoreV net"],
+    ["NET PROFIT", fmt(netAfter), freeUnits>0?("after "+fmt(freeUnits)+" free (-"+fmt(freeCost)+")"):("on "+fmt(tot.sell)+" list")],
   ];
-  if(freeUnits>0) sumRows.push(["Less: "+fmt(freeUnits)+" free unit"+(freeUnits===1?"":"s")+" (× "+fmt(avgOxe)+" avg OxeFit unit cost)", "− "+fmt(freeCost)+" AED"]);
-  sumRows.push(["CoreV net profit", fmt(netAfter)+" AED ("+pct(nP)+")"]);
-  sumRows.push(["Deal-wide extra discount", pct(DEAL.extra||0)]);
-  doc.autoTable({
-    startY:y+8, theme:"plain", body:sumRows,
-    styles:{font:"helvetica",fontSize:9,cellPadding:3},
-    columnStyles:{0:{cellWidth:320,textColor:[100,110,130]},1:{halign:"right",fontStyle:"bold",textColor:[14,22,38]}},
-    margin:{left:40,right:40}
+  const gap=12, cwid=(CW-3*gap)/4, cy=82, chh=66;
+  cards.forEach((c,i)=>{ const cx=M+i*(cwid+gap);
+    doc.setFillColor(255,255,255); doc.setDrawColor(226,230,238); doc.setLineWidth(1); doc.roundedRect(cx,cy,cwid,chh,8,8,"FD");
+    doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(120,130,150); doc.text(c[0],cx+12,cy+17);
+    doc.setFont("helvetica","bold"); doc.setFontSize(17); doc.setTextColor(14,22,38); doc.text(String(c[1]),cx+12,cy+41);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(120,130,150); doc.text(String(c[2]),cx+12,cy+57);
   });
 
-  y=doc.lastAutoTable.finalY+18;
-  doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(150,160,175);
-  doc.text("Indicative figures based on current catalog cost stack and assumptions. Free units are a give-away discount: revenue is unchanged and their cost is deducted from net profit only.",40,y,{maxWidth:W-80});
+  const wh=[255,255,255];
+  doc.autoTable({
+    startY: cy+chh+16,
+    head:[["LINE ITEM","QTY","UNIT PRICE","UNIT DISC","NET REVENUE","OXEFIT COST","GROSS PROFIT","COREV COST","NET PROFIT","SPLIT"]],
+    body,
+    foot:[[ "Deal total"+(DEAL.extra?" · "+pct(DEAL.extra)+" deal disc":""),
+      {content:String(tot.units),styles:{textColor:wh}}, {content:"",styles:{}}, {content:"",styles:{}},
+      {content:fmt(tot.netRev),styles:{textColor:wh}}, {content:fmt(tot.oxe),styles:{textColor:wh}},
+      {content:fmt(tot.gross)+"  "+pct(gP),styles:{textColor:[90,212,154]}}, {content:fmt(tot.corev),styles:{textColor:wh}},
+      {content:fmt(netAfter)+"  "+pct(nP),styles:{textColor:[90,212,154]}}, {content:"",styles:{}} ]],
+    theme:"grid",
+    styles:{font:"helvetica",fontSize:8,cellPadding:{top:7,bottom:7,left:6,right:6},textColor:[20,30,50],valign:"middle",lineColor:[238,241,246],lineWidth:0.5},
+    headStyles:{fillColor:[14,22,38],textColor:[255,255,255],fontStyle:"bold",fontSize:7,halign:"right",lineColor:[14,22,38]},
+    footStyles:{fillColor:[14,22,38],textColor:[255,255,255],fontStyle:"bold",halign:"right",lineColor:[14,22,38]},
+    columnStyles:{0:{halign:"left",cellWidth:130,fontStyle:"bold"},1:{halign:"right",cellWidth:34,textColor:[28,78,216]},2:{halign:"right",cellWidth:58,textColor:[28,78,216]},3:{halign:"right",cellWidth:54,textColor:[28,78,216]},4:{halign:"right",cellWidth:70},5:{halign:"right",cellWidth:66},6:{halign:"right",cellWidth:86},7:{halign:"right",cellWidth:62},8:{halign:"right",cellWidth:86},9:{halign:"left",cellWidth:116}},
+    margin:{left:M,right:M},
+    didDrawCell:(d)=>{
+      if(d.section==='body' && d.column.index===9){
+        const s=splits[d.row.index]; if(!s)return;
+        const x=d.cell.x+6, y0=d.cell.y+d.cell.height/2-6, bw=d.cell.width-12, bh=7;
+        const ow=bw*s.oxeW/100, cw=bw*s.corevW/100, nw=bw*s.netW/100;
+        doc.setFillColor(43,58,85); doc.rect(x,y0,ow,bh,"F");
+        doc.setFillColor(201,154,46); doc.rect(x+ow,y0,cw,bh,"F");
+        doc.setFillColor(43,164,94); doc.rect(x+ow+cw,y0,nw,bh,"F");
+        doc.setFont("helvetica","normal"); doc.setFontSize(5.4); doc.setTextColor(120,130,150);
+        doc.text("OxeFit "+s.oxeW.toFixed(0)+"% · CoreV "+s.corevW.toFixed(0)+"% · Net "+s.netW.toFixed(0)+"%", x, y0+bh+7);
+      }
+    }
+  });
 
-  doc.save("OXEFIT-CoreV-Deal-Quote-"+dateStr+".pdf");
+  let y=doc.lastAutoTable.finalY+16;
+  if(freeUnits>0){
+    const txt=fmt(freeUnits)+" free unit"+(freeUnits===1?"":"s")+" given — revenue unchanged; cost deducted from profit: "+fmt(freeUnits)+" x "+fmt(avgOxe)+" avg OxeFit unit cost = -"+fmt(freeCost)+" AED. Net profit "+fmt(tot.net)+" -> "+fmt(netAfter)+" AED.";
+    const lines=doc.splitTextToSize(txt, CW-24); const bh=lines.length*12+16;
+    doc.setFillColor(234,240,254); doc.setDrawColor(207,224,255); doc.setLineWidth(1); doc.roundedRect(M,y,CW,bh,8,8,"FD");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(14,22,38); doc.text(lines,M+12,y+16);
+    y+=bh+12;
+  }
+  doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(150,160,175);
+  doc.text("Indicative figures based on current catalog cost stack and assumptions. Free units are a give-away discount: revenue unchanged; cost deducted from net profit only.",M,y+4,{maxWidth:CW});
+
+  const fname="OXEFIT-CoreV-Deal-Quote-"+dateStr+".pdf";
+  try{
+    const blob=doc.output("blob"); const url=URL.createObjectURL(blob);
+    const isMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints>1 && /Macintosh/.test(navigator.userAgent));
+    if(isMobile){ const w=window.open(url,"_blank"); if(!w){ const a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener"; document.body.appendChild(a); a.click(); a.remove(); } }
+    else { const a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove(); }
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(e){ try{ doc.save(fname); }catch(_){ alert("Could not open the PDF on this device — try a desktop browser."); } }
 }
 
 $("d_add").addEventListener("click", addDealLine);
@@ -2155,6 +2196,15 @@ function importCSVText(text){
   renderAll();
 }
 /* ---------- PDF ---------- */
+function savePdf(doc,fname){
+  try{
+    const blob=doc.output("blob"); const url=URL.createObjectURL(blob);
+    const isMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints>1 && /Macintosh/.test(navigator.userAgent));
+    if(isMobile){ const w=window.open(url,"_blank"); if(!w){ const a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener"; document.body.appendChild(a); a.click(); a.remove(); } }
+    else { const a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove(); }
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(e){ try{ doc.save(fname); }catch(_){ alert("Could not open the PDF on this device — try a desktop browser."); } }
+}
 function pdfHeader(doc,title,right){
   const W=doc.internal.pageSize.getWidth();
   doc.setFillColor(255,255,255); doc.rect(0,0,W,84,"F");
@@ -2232,7 +2282,7 @@ function repPDF(r){
     styles:{fontSize:8.5,cellPadding:3},headStyles:{fillColor:[27,38,56],textColor:[255,255,255],fontSize:8},
     columnStyles:{1:{halign:"right"},2:{halign:"right"},3:{halign:"right",fontStyle:"bold"}}});
   pdfFooter(doc);
-  doc.save("CoreV_Commission_"+r.name.replace(/\s+/g,"_")+".pdf");
+  savePdf(doc,"CoreV_Commission_"+r.name.replace(/\s+/g,"_")+".pdf");
 }
 function referralPDF(){
   if(!ready()){alert("PDF engine still loading — try again in a second.");return;}
@@ -2248,7 +2298,7 @@ function referralPDF(){
     foot:[["Total","","","AED "+f2(totC),"","AED "+f2(totE)]],footStyles:{fillColor:[14,22,38],textColor:[255,255,255]},
     columnStyles:{1:{halign:"right"},3:{halign:"right"},5:{halign:"right",fontStyle:"bold",textColor:[17,122,78]}}});
   pdfFooter(doc);
-  doc.save("CoreV_Referrals.pdf");
+  savePdf(doc,"CoreV_Referrals.pdf");
 }
 function emailRep(r){
   const R=repRoll(r);
