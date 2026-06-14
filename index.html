@@ -200,6 +200,16 @@
   .barpct{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--muted);margin-top:4px;white-space:nowrap}
   .dealgive{margin:16px 0 2px;background:var(--input-soft);border:1px solid #CFE0FF;color:var(--ink);border-radius:10px;padding:11px 14px;font-size:12.5px;line-height:1.5}
   .seg-channel{background:#8A6FE8}
+  .dgkpis{display:flex;gap:14px;margin-bottom:24px;align-items:stretch;flex-wrap:wrap}
+  .dgkpi-grid{flex:1 1 420px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .dgkpi-hero{flex:1 1 260px;background:linear-gradient(135deg,#1C4ED8 0%,#3B5BDB 100%);border:0;color:#fff;
+    display:flex;flex-direction:column;justify-content:center;box-shadow:0 10px 26px -10px rgba(28,78,216,.55)}
+  .dgkpi-hero::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.10)}
+  .dgkpi-hero .lbl{color:rgba(255,255,255,.82)}
+  .dgkpi-hero .val{font-size:46px;color:#fff;margin-top:8px;line-height:1}
+  .dgkpi-hero .meta{color:rgba(255,255,255,.8);font-size:12.5px;margin-top:8px}
+  @media (max-width:760px){.dgkpi-grid{flex-basis:100%}.dgkpi-hero{flex-basis:100%}}
+  @media (max-width:430px){.dgkpi-grid{grid-template-columns:1fr}}
   .perfhead{display:flex;align-items:baseline;gap:10px;margin:26px 0 12px;flex-wrap:wrap}
   .perfhead h3{font-family:"Space Grotesk";font-size:16px;margin:0;color:var(--ink);font-weight:600}
   .perf-elig{font-size:11px;font-weight:700;border-radius:6px;padding:3px 9px}
@@ -567,13 +577,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.14.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.15.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.14.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.15.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -761,7 +771,7 @@
         </div>
       </section>
 
-      <section class="kpis" id="dgkpis"></section>
+      <section class="dgkpis" id="dgkpis"></section>
 
       <section class="tablecard">
         <div class="scroll">
@@ -1670,14 +1680,16 @@ function renderDealer(){
   $("dgfoot").innerHTML="";
 
   const avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
-  const cards=[
+  const heroVal=pct(avg(all.map(c=>c.netPct)));
+  const small=[
     {lbl:"Dealer margin (tier)", val:pct(dealerMarginPct()), meta:DG.tier},
     {lbl:"Total channel cost", val:pct(dealerMarginPct()+DG.comm), meta:"dealer margin + sales comm"},
     {lbl:"Avg gross profit", val:pct(avg(all.map(c=>c.corevGPpct))), meta:"CoreV gross · after channel"},
-    {lbl:"Avg CoreV net margin", val:pct(avg(all.map(c=>c.netPct))), meta:"on selling price"},
-    {lbl:"Lowest CoreV net margin", val:pct(all.length?Math.min(...all.map(c=>c.netPct)):0), meta:"min across dealer products"},
+    {lbl:"Lowest CoreV net margin", val:pct(all.length?Math.min(...all.map(c=>c.netPct)):0), meta:"min across products"},
   ];
-  $("dgkpis").innerHTML=cards.map(c=>`<div class="kpi"><div class="lbl">${c.lbl}</div><div class="val tnum">${c.val}</div><div class="meta">${c.meta}</div></div>`).join("");
+  $("dgkpis").innerHTML =
+    `<div class="dgkpi-grid">`+small.map(c=>`<div class="kpi"><div class="lbl">${c.lbl}</div><div class="val tnum">${c.val}</div><div class="meta">${c.meta}</div></div>`).join("")+`</div>`+
+    `<div class="kpi dgkpi-hero"><div class="lbl">Avg CoreV net margin</div><div class="val tnum">${heroVal}</div><div class="meta">net profit ÷ selling price · across dealer products</div></div>`;
 
   $("dgbody").querySelectorAll(".dg-disc").forEach(inp=>inp.addEventListener("change",e=>{
     const sku=e.target.closest("tr").dataset.dsku; DG.disc[sku]=parseFloat(e.target.value)||0; renderDealer(); dgChanged();
