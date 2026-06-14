@@ -331,7 +331,32 @@
   .hs-ownerrow{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
   .hs-ownerrow span:first-child{min-width:78px}
   .hs-ownerrow select{flex:1;min-width:0}
-  .hs-pre{background:#0d1117;color:#c9d1d9;border-radius:8px;padding:14px;font-size:11px;line-height:1.5;overflow-x:auto;margin:0;font-family:"JetBrains Mono",monospace}
+  .hs-pre{background:#0d1117;color:#c9d1d9;border-radius:8px;padding:14px;font-size:11px;line-height:1.5;overflow-x:auto;margin:10px 0 0;font-family:"JetBrains Mono",monospace}
+  .hs-modal-overlay{position:fixed;inset:0;z-index:900;background:rgba(10,17,30,.62);display:flex;align-items:flex-start;justify-content:center;padding:40px 18px;overflow-y:auto}
+  .hs-modal{background:var(--panel,#fff);border:1px solid var(--line);border-radius:16px;max-width:600px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
+  .hs-modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line);font-family:"Space Grotesk";font-weight:700;font-size:15px;color:var(--ink)}
+  .hs-modal-body{padding:20px 22px;max-height:62vh;overflow-y:auto}
+  .hs-modal-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;padding:14px 22px;border-top:1px solid var(--line);background:var(--input-soft)}
+  .hs-x{background:none;border:0;font-size:24px;line-height:1;color:var(--muted);cursor:pointer;padding:0 4px}.hs-x:hover{color:var(--ink)}
+  .hs-lbl{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
+  .hs-modal-in{width:100%;border:1px solid var(--line);background:var(--input-soft);border-radius:8px;padding:10px 12px;font-family:"JetBrains Mono";font-size:12.5px;color:var(--input);outline:none}
+  .hs-modal-in:focus{border-color:var(--blue)}
+  .hs-show{position:absolute;top:50%;right:8px;transform:translateY(-50%);background:none;border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer}
+  .hs-link{color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;text-decoration:none}.hs-link:hover{text-decoration:underline}
+  .hs-hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px}
+  .hs-steps{font-size:12px;color:var(--muted);line-height:1.6;background:var(--input-soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:16px}
+  .hs-steps code{background:rgba(59,91,219,.1);color:var(--blue);padding:1px 5px;border-radius:4px;font-size:11px}
+  .hs-maphead{display:flex;align-items:center;justify-content:space-between;margin-top:20px;font-size:13px;color:var(--ink)}
+  .hs-req{font-size:11px;color:var(--muted);font-weight:600}
+  .hs-ownermap2{display:flex;flex-direction:column;gap:8px;margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:12px;max-height:240px;overflow-y:auto}
+  .hs-maprow{display:flex;align-items:center;gap:10px}
+  .hs-mapdot{width:8px;height:8px;border-radius:50%;background:var(--pos);flex:none}
+  .hs-maprep{font-weight:700;font-size:13px;min-width:64px;color:var(--ink)}
+  .hs-maparrow{color:var(--muted)}
+  .hs-mapsel{flex:1;min-width:0;border:1px solid var(--line);background:var(--input-soft);border-radius:8px;padding:8px 10px;font-size:12.5px;color:var(--input);outline:none}
+  .hs-modal-status{font-size:12.5px;margin-top:12px;min-height:16px;color:var(--muted)}
+  .hs-modal-status.ok{color:var(--pos)}.hs-modal-status.err{color:var(--warn)}
+  .btn.danger{border-color:var(--warn);color:var(--warn)}.btn.danger:hover{background:var(--warn);color:#fff}
   @media (max-width:980px){.agrid{grid-template-columns:repeat(4,1fr)}.kpis{grid-template-columns:1fr 1fr}.hubgrid{grid-template-columns:1fr}}
   @media (max-width:560px){.wrap{padding:16px}header.topbar{padding:14px 16px}.agrid{grid-template-columns:repeat(2,1fr)}.module-tag{display:none}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -470,13 +495,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.0.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.1.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="mark">Core<span class="v">V</span></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.0.0</span></div>
+    <div class="brand"><span class="mark">Core<span class="v">V</span></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.1.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -593,13 +618,12 @@
 
     <!-- HUBSPOT -->
     <section class="blk">
-      <div class="blkhead"><h2>HubSpot</h2><span class="why">— connected on the backend. Set each rep's HubSpot email; owners resolve automatically and closed-won deals pull in per rep.</span></div>
+      <div class="blkhead"><h2>HubSpot</h2><span class="why">— pull closed-won deals: value → Gross (AED), name → customer, close date → month.</span>
+        <button class="btn hub" id="hs_connectbtn" style="margin-left:auto">🔑 Connect HubSpot</button>
+      </div>
       <div class="panel pad">
-        <div class="hub-status" id="hs_status">Connecting to HubSpot…</div>
-        <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:14px">Rep → HubSpot email (admin)</div>
-        <div id="hs_emailmap" class="hs-emailgrid"></div>
+        <div class="hub-status" id="hs_status">Not connected. Click <b>Connect HubSpot</b> to add your token, proxy URL and owner mapping.</div>
         <div class="toolrow" style="margin-top:12px">
-          <button class="btn" id="hs_verify">Verify emails</button>
           <button class="btn hub" id="hs_fetch">⤓ Fetch closed-won deals</button>
           <button class="btn" id="hs_auto">Auto-pull on open: <b id="hs_autostate">on</b></button>
         </div>
@@ -612,6 +636,36 @@
         </details>
       </div>
     </section>
+
+    <!-- HUBSPOT CONNECT MODAL -->
+    <div id="hs_modal" class="hs-modal-overlay" style="display:none">
+      <div class="hs-modal">
+        <div class="hs-modal-head"><span>🔑 Connect HubSpot — Private App Token</span><button class="hs-x" id="hs_modalclose">×</button></div>
+        <div class="hs-modal-body">
+          <div class="hs-steps">Create a HubSpot <b>Private App</b> with read scopes <code>crm.objects.deals.read</code>, <code>crm.objects.owners.read</code>, <code>crm.schemas.deals.read</code> → copy the access token (starts with <code>pat-…</code>) → paste below.</div>
+          <label class="hs-lbl">Access Token</label>
+          <div style="position:relative"><input id="hs_token" class="hs-modal-in" type="password" placeholder="pat-..." autocomplete="off"><button id="hs_showtoken" class="hs-show" type="button">show</button></div>
+          <a class="hs-link" id="hs_openapps" href="https://app.hubspot.com/private-apps/" target="_blank" rel="noopener">Open HubSpot Private Apps ↗</a>
+          <label class="hs-lbl" style="margin-top:16px">CORS Proxy URL <span style="color:var(--warn)">*</span></label>
+          <input id="hs_proxy" class="hs-modal-in" type="text" placeholder="https://your-worker.workers.dev">
+          <div class="hs-hint">HubSpot blocks direct browser calls (CORS). A tiny Cloudflare Worker forwards them. <a class="hs-link" id="hs_workerlink">Show me the Worker code →</a></div>
+          <pre id="hs_workercode" class="hs-pre" style="display:none"></pre>
+          <div class="hs-maphead"><b>👥 Rep ↔ HubSpot Owner Mapping</b><span class="hs-req">Required before importing deals</span></div>
+          <div class="hs-hint" style="margin-top:2px">For each rep, pick the matching HubSpot user. Saved to this browser.</div>
+          <div id="hs_ownermap" class="hs-ownermap2"></div>
+          <div class="toolrow" style="justify-content:flex-end;margin-top:10px">
+            <button class="btn" id="hs_refreshowners">↻ Refresh Owners</button>
+            <button class="btn primary" id="hs_savemapping">Save Mapping</button>
+          </div>
+          <div class="hs-modal-status" id="hs_modalstatus"></div>
+        </div>
+        <div class="hs-modal-foot">
+          <button class="btn danger" id="hs_disconnect">Disconnect</button>
+          <button class="btn" id="hs_modalclose2">Close</button>
+          <button class="btn primary" id="hs_savetoken">Save Token &amp; Test</button>
+        </div>
+      </div>
+    </div>
 
     <!-- TEAM SUMMARY -->
     <section class="blk">
@@ -1273,7 +1327,7 @@ function publishStore(){
   REPS.forEach(r=>r.deals.forEach(d=>deals.push({rep:r.name,customer:d.cust,gross:d.gross,collected:effColl(d),month:d.month||"",future:!!d.future})));
   window.CoreVStore={deals,ts:Date.now()}; window.dispatchEvent(new CustomEvent('corev:store'));
 }
-function renderAll(){ renderMatrix(); renderSummary(); renderTabs(); renderRep(); renderRefs(); publishStore(); hsSyncEmailGrid(); }
+function renderAll(){ renderMatrix(); renderSummary(); renderTabs(); renderRep(); renderRefs(); publishStore(); }
 
 /* ---------- HubSpot ---------- */
 function monthFromISO(s){ if(!s)return""; const d=new Date(s); if(isNaN(d))return""; return MON[d.getMonth()]+"/"+String(d.getFullYear()).slice(2); }
@@ -1289,63 +1343,100 @@ function addHubDeal(cust,amount,owner,month,assign){
   pushHubDeal(rep,{cust,amount,month});
 }
 
-/* ---- HubSpot — backend Worker, per-rep email → owner resolution ---- */
-const HS_PROXY="https://little-firefly-ed38.ahmedabuhakmeh.workers.dev";
-const HS_KEYS={emails:"corev_hs_emails",auto:"corev_hs_auto"};
-const HS_DEFAULT_EMAILS={Marios:"marios@core-velocity.com",Fatima:"fatima@core-velocity.com",Connor:"connor@core-velocity.com",Wafiq:"wafiq@core-velocity.com",Jawdat:"jawdat@core-velocity.com"};
-let HS={emails:{},auto:true,ready:false,ownerCache:{},status:{}};
-let _hsRepSig="";
-function hsLoad(){ try{ const s=JSON.parse(localStorage.getItem(HS_KEYS.emails)||"null"); HS.emails=Object.assign({},HS_DEFAULT_EMAILS,s||{}); const a=localStorage.getItem(HS_KEYS.auto); HS.auto=(a===null?true:a==="1"); }catch(_){ HS.emails=Object.assign({},HS_DEFAULT_EMAILS); } }
-function hsPersist(){ try{ localStorage.setItem(HS_KEYS.emails,JSON.stringify(HS.emails)); localStorage.setItem(HS_KEYS.auto,HS.auto?"1":"0"); }catch(_){ } }
+/* ---- HubSpot — Private App token via Cloudflare Worker proxy (browser-token, modal connect) ---- */
+const HS_DEFAULT_PROXY="https://little-firefly-ed38.ahmedabuhakmeh.workers.dev";
+const HS_KEYS={token:"corev_hs_token",proxy:"corev_hs_proxy",map:"corev_hs_ownermap",auto:"corev_hs_auto"};
+let HS={token:"",proxy:HS_DEFAULT_PROXY,owners:[],ownerMap:{},auto:true};
+function hsLoad(){ try{
+  HS.token=localStorage.getItem(HS_KEYS.token)||"";
+  HS.proxy=localStorage.getItem(HS_KEYS.proxy)||HS_DEFAULT_PROXY;
+  HS.ownerMap=JSON.parse(localStorage.getItem(HS_KEYS.map)||"{}");
+  const a=localStorage.getItem(HS_KEYS.auto); HS.auto=(a===null?true:a==="1");
+}catch(_){ HS.proxy=HS_DEFAULT_PROXY; } }
+function hsPersist(){ try{
+  localStorage.setItem(HS_KEYS.token,HS.token);
+  localStorage.setItem(HS_KEYS.proxy,HS.proxy);
+  localStorage.setItem(HS_KEYS.map,JSON.stringify(HS.ownerMap));
+  localStorage.setItem(HS_KEYS.auto,HS.auto?"1":"0");
+}catch(_){ } }
+const hsConnected=()=>!!(HS.token&&HS.proxy);
 function hsStatus(msg,kind){ const el=$("hs_status"); if(!el)return; el.className="hub-status"+(kind?" "+kind:""); el.innerHTML=msg; }
-function hsUrl(path){ return HS_PROXY.replace(/\/+$/,"")+path; }
+function hsModalStatus(msg,kind){ const el=$("hs_modalstatus"); if(!el)return; el.className="hs-modal-status"+(kind?" "+kind:""); el.innerHTML=msg||""; }
+function hsUrl(path){ const b=(HS.proxy||"").trim().replace(/\/+$/,""); return b?b+path:null; }
 async function hsApi(path,opts={}){
+  if(!HS.token) throw new Error("Connect HubSpot first (no token).");
   const url=path.startsWith("http")?path:hsUrl(path);
-  const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{})}});
-  if(r.status===401||r.status===403){ const t=await r.text();
-    if(/MISSING_SCOPES|required scopes/i.test(t)) throw new Error("Worker token missing a read scope — add crm.objects.deals.read &amp; crm.objects.owners.read to the Private App.");
-    throw new Error("Auth error ("+r.status+") — check the HUBSPOT_TOKEN secret in your Worker."); }
-  if(!r.ok){ const t=await r.text(); throw new Error("HubSpot "+r.status+": "+t.slice(0,160)); }
+  if(!url) throw new Error("Set the CORS Proxy URL.");
+  const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{}),"Authorization":"Bearer "+HS.token}});
+  if(r.status===401) throw new Error("Token rejected (401) — re-check the Private App token.");
+  if(!r.ok){ const t=await r.text();
+    if(r.status===403&&/MISSING_SCOPES|required scopes/i.test(t)) throw new Error("Token missing a read scope (crm.objects.deals.read / crm.objects.owners.read).");
+    throw new Error("HubSpot "+r.status+": "+t.slice(0,140)); }
   return r.json();
 }
-async function hsResolveOwner(email){
-  email=(email||"").trim().toLowerCase(); if(!email) return null;
-  if(HS.ownerCache[email]!==undefined) return HS.ownerCache[email];
-  try{ const data=await hsApi("/crm/v3/owners?email="+encodeURIComponent(email)); const id=(data.results&&data.results[0]&&data.results[0].id)||null; HS.ownerCache[email]=id; return id; }
-  catch(_){ HS.ownerCache[email]=null; return null; }
+function hsRefreshChip(){
+  const b=$("hs_connectbtn"); if(b) b.innerHTML=hsConnected()?"🔑 HubSpot connected":"🔑 Connect HubSpot";
+  if(hsConnected()){ const n=REPS.filter(r=>HS.ownerMap[r.name]).length; hsStatus(`Connected to HubSpot. ${n} rep${n===1?"":"s"} mapped to owners — fetch closed-won deals below.`,"ok"); }
+  else hsStatus("Not connected. Click <b>Connect HubSpot</b> to add your token, proxy URL and owner mapping.","");
 }
-async function hsAutoConnect(){
-  hsStatus("Connecting to HubSpot…");
-  try{ await hsApi("/crm/v3/owners?limit=1"); HS.ready=true; hsStatus("Connected to HubSpot ✓ via your Worker.","ok");
-       if(HS.auto && Object.values(HS.emails).some(e=>e)) await hsFetchClosedWon(true); }
-  catch(e){ HS.ready=false; hsStatus("Not connected: "+e.message+" — check the Worker is deployed and the HUBSPOT_TOKEN secret is set.","err"); }
+function hsOpenModal(){ const m=$("hs_modal"); if(!m)return; $("hs_token").value=HS.token; $("hs_proxy").value=HS.proxy||HS_DEFAULT_PROXY; hsModalStatus(""); m.style.display="flex"; if(HS.token&&HS.proxy) hsRefreshOwners(); else hsRenderOwnerMap(); }
+function hsCloseModal(){ const m=$("hs_modal"); if(m)m.style.display="none"; }
+async function hsSaveTokenTest(){
+  const tk=$("hs_token").value.trim(), px=$("hs_proxy").value.trim();
+  if(!tk||!/^pat-/i.test(tk)){ hsModalStatus("That doesn't look like a Private App token (starts with <code>pat-</code>).","err"); return; }
+  if(!px){ hsModalStatus("Enter the CORS Proxy URL (your Cloudflare Worker).","err"); return; }
+  HS.token=tk; HS.proxy=px; hsModalStatus("Testing connection…");
+  try{ await hsApi("/crm/v3/owners?limit=1"); hsPersist(); hsModalStatus("Connected ✓ — loading owners…","ok"); await hsRefreshOwners(); hsRefreshChip(); }
+  catch(e){ hsModalStatus("Failed: "+e.message,"err"); }
 }
-function hsRenderEmailMap(){
-  const box=$("hs_emailmap"); if(!box)return;
-  box.innerHTML=REPS.map(r=>{
-    const st=HS.status[r.name];
-    const badge=(st===undefined||st===null)?"":(st?`<span class="hs-ok">✓</span>`:`<span class="hs-bad">not found</span>`);
-    return `<div class="hs-ownerrow"><span>${r.name}</span><input class="hub-in hs-email" data-rep="${r.name}" type="email" placeholder="name@core-velocity.com" value="${HS.emails[r.name]||""}"><span class="hs-stat">${badge}</span></div>`;
-  }).join("");
-  box.querySelectorAll("input.hs-email").forEach(inp=>inp.addEventListener("change",e=>{const rep=e.target.dataset.rep,v=e.target.value.trim(); HS.emails[rep]=v; delete HS.status[rep]; hsPersist(); hsRenderEmailMap();}));
-}
-function hsSyncEmailGrid(){ const sig=REPS.map(r=>r.name).join("|"); if(sig!==_hsRepSig){ _hsRepSig=sig; hsRenderEmailMap(); } }
-async function hsVerify(){
-  hsStatus("Resolving HubSpot owners from emails…");
-  for(const r of REPS){ const em=HS.emails[r.name]; if(!em){ HS.status[r.name]=null; continue; } const id=await hsResolveOwner(em); HS.status[r.name]= id?("owner "+id):false; }
-  hsRenderEmailMap();
-  const withE=REPS.filter(r=>HS.emails[r.name]).length, ok=REPS.filter(r=>HS.status[r.name]&&HS.status[r.name]!==false).length;
-  hsStatus(`Resolved ${ok} of ${withE} email${withE===1?"":"s"} to HubSpot owners.`, ok?"ok":"err");
-}
-async function hsFetchClosedWon(silent){
-  const withEmail=REPS.filter(r=>HS.emails[r.name]);
-  if(!withEmail.length){ hsStatus("Add at least one rep's HubSpot email below.","err"); return; }
-  if(!silent) hsStatus("Fetching closed-won deals…"); let total=0,added=0,reps=0;
+async function hsRefreshOwners(){
+  if(!HS.token||!HS.proxy){ hsRenderOwnerMap(); return; }
+  hsModalStatus("Loading HubSpot owners…");
   try{
-    for(const rep of withEmail){
-      const ownerId=await hsResolveOwner(HS.emails[rep.name]); HS.status[rep.name]= ownerId?("owner "+ownerId):false;
-      if(!ownerId) continue; reps++;
-      let after,guard=0;
+    const all=[]; let after=null,guard=0;
+    do{ const data=await hsApi("/crm/v3/owners?limit=100"+(after?"&after="+encodeURIComponent(after):""));
+        (data.results||[]).forEach(o=>all.push({id:o.id,email:o.email||"",name:((o.firstName||"")+" "+(o.lastName||"")).trim()||o.email||"(unnamed)"}));
+        after=data.paging&&data.paging.next&&data.paging.next.after; guard++; }while(after&&guard<10);
+    all.sort((a,b)=>a.name.localeCompare(b.name)); HS.owners=all; hsRenderOwnerMap();
+    hsModalStatus("Loaded "+all.length+" owners. Map each rep, then Save Mapping.","ok");
+  }catch(e){ hsModalStatus("Could not load owners: "+e.message,"err"); }
+}
+function hsRenderOwnerMap(){
+  const box=$("hs_ownermap"); if(!box)return;
+  if(!HS.owners.length){ box.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">Save a valid token to load the HubSpot owner list.</div>'; return; }
+  const opt=s=>'<option value="">— not mapped —</option>'+HS.owners.map(o=>`<option value="${o.id}" ${o.id===s?"selected":""}>${o.name}${o.email?" ("+o.email+")":""}</option>`).join("");
+  box.innerHTML=REPS.map(r=>`<div class="hs-maprow"><span class="hs-mapdot"></span><span class="hs-maprep">${r.name}</span><span class="hs-maparrow">→</span><select class="d-sel hs-mapsel" data-rep="${r.name}">${opt(HS.ownerMap[r.name]||"")}</select></div>`).join("");
+}
+function hsSaveMapping(){
+  const box=$("hs_ownermap"); if(!box)return; const m={};
+  box.querySelectorAll("select[data-rep]").forEach(s=>{ if(s.value)m[s.dataset.rep]=s.value; });
+  HS.ownerMap=m; hsPersist(); hsModalStatus("✓ Saved "+Object.keys(m).length+" owner mapping(s).","ok"); hsRefreshChip();
+}
+function hsDisconnect(){ HS.token=""; HS.owners=[]; hsPersist(); const t=$("hs_token"); if(t)t.value=""; hsRenderOwnerMap(); hsModalStatus("Disconnected — token cleared from this browser.",""); hsRefreshChip(); }
+function hsShowToken(){ const i=$("hs_token"),b=$("hs_showtoken"); if(!i)return; if(i.type==="password"){i.type="text";b.textContent="hide";}else{i.type="password";b.textContent="show";} }
+const HS_WORKER=`export default {
+  async fetch(request) {
+    const cors = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Authorization,Content-Type'};
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+    const url = new URL(request.url);
+    const upstream = await fetch('https://api.hubapi.com' + url.pathname + url.search, {
+      method: request.method,
+      headers: { 'Authorization': request.headers.get('Authorization') || '', 'Content-Type': 'application/json' },
+      body: ['GET','HEAD'].includes(request.method) ? undefined : await request.text()
+    });
+    const body = await upstream.text();
+    return new Response(body, { status: upstream.status, headers: { ...cors, 'Content-Type': 'application/json' } });
+  }
+};`;
+function hsToggleWorker(){ const p=$("hs_workercode"); if(!p)return; if(p.style.display==="none"){p.style.display="block";p.textContent=HS_WORKER;}else p.style.display="none"; }
+async function hsFetchClosedWon(silent){
+  if(!hsConnected()){ hsStatus("Connect HubSpot first.","err"); hsOpenModal(); return; }
+  const mapped=REPS.filter(r=>HS.ownerMap[r.name]);
+  if(!mapped.length){ hsStatus("Map at least one rep to a HubSpot owner — click <b>Connect HubSpot</b>.","err"); return; }
+  if(!silent) hsStatus("Fetching closed-won deals…"); let total=0,added=0;
+  try{
+    for(const rep of mapped){
+      const ownerId=HS.ownerMap[rep.name]; let after,guard=0;
       do{
         const body={filterGroups:[{filters:[{propertyName:"hubspot_owner_id",operator:"EQ",value:ownerId},{propertyName:"dealstage",operator:"NEQ",value:"closedlost"}]}],
           properties:["dealname","amount","closedate","dealstage","hs_is_closed_won","hs_is_closed"],sorts:[{propertyName:"closedate",direction:"DESCENDING"}],limit:100};
@@ -1358,12 +1449,13 @@ async function hsFetchClosedWon(silent){
         after=data.paging&&data.paging.next&&data.paging.next.after; guard++;
       }while(after&&guard<50);
     }
-    hsRenderEmailMap();
-    hsStatus(`Synced ${total} closed-won deal${total===1?"":"s"} across ${reps} rep${reps===1?"":"s"} (${added} new, rest updated).`,"ok");
+    hsStatus(`Synced ${total} closed-won deal${total===1?"":"s"} across ${mapped.length} rep${mapped.length===1?"":"s"} (${added} new, rest updated).`,"ok");
     renderAll();
   }catch(e){ hsStatus("Fetch failed: "+e.message,"err"); }
 }
 function hsToggleAuto(){ HS.auto=!HS.auto; hsPersist(); const s=$("hs_autostate"); if(s)s.textContent=HS.auto?"on":"off"; }
+function hsInit(){ hsLoad(); const s=$("hs_autostate"); if(s)s.textContent=HS.auto?"on":"off"; hsRefreshChip();
+  if(hsConnected()&&HS.auto&&REPS.some(r=>HS.ownerMap[r.name])) hsFetchClosedWon(true); }
 function parseCSV(text){
   const rows=[];let i=0,f="",row=[],q=false;
   while(i<text.length){const c=text[i];
@@ -1490,7 +1582,16 @@ $("addDeal").addEventListener("click",()=>{REPS[sel].deals.push({type:"B2C",cust
 $("addRef").addEventListener("click",()=>{REFS.push({cust:"New referral",gross:0,coll:0,month:""});renderRefs();renderSummary();});
 $("ref_pdf").addEventListener("click",referralPDF);
 $("ref_email").addEventListener("click",emailRef);
-$("hs_verify").addEventListener("click",hsVerify);
+$("hs_connectbtn").addEventListener("click",hsOpenModal);
+$("hs_modalclose").addEventListener("click",hsCloseModal);
+$("hs_modalclose2").addEventListener("click",hsCloseModal);
+$("hs_savetoken").addEventListener("click",hsSaveTokenTest);
+$("hs_refreshowners").addEventListener("click",hsRefreshOwners);
+$("hs_savemapping").addEventListener("click",hsSaveMapping);
+$("hs_disconnect").addEventListener("click",hsDisconnect);
+$("hs_showtoken").addEventListener("click",hsShowToken);
+$("hs_workerlink").addEventListener("click",hsToggleWorker);
+$("hs_modal").addEventListener("click",e=>{ if(e.target.id==="hs_modal") hsCloseModal(); });
 $("hs_fetch").addEventListener("click",()=>hsFetchClosedWon(false));
 $("hs_auto").addEventListener("click",hsToggleAuto);
 $("hs_import").addEventListener("click",()=>importCSVText($("hs_csv").value));
@@ -1500,10 +1601,8 @@ function bindRules(){
   const map=[["r_vat","vat",100],["r_base","base",100],["r_thr","thr",100],["r_b","b",100],["r_a1","a1",100],["r_a2","a2",100],["r_ref","ref",100]];
   map.forEach(([id,key])=>{const el=$(id);el.value=+(RULES[key]*100).toFixed(2);el.addEventListener("input",()=>{RULES[key]=(parseFloat(el.value)||0)/100;renderAll();});});
 }
-hsLoad();
-if($("hs_autostate"))$("hs_autostate").textContent=HS.auto?"on":"off";
 bindRules(); renderAll();
-hsAutoConnect();
+hsInit();
 
 })();</script>
 <script>(function(){
