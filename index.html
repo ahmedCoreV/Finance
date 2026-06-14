@@ -324,6 +324,10 @@
   .hub-in{width:100%;border:1px solid var(--line);background:var(--input-soft);border-radius:8px;padding:9px 11px;font-family:"JetBrains Mono";font-size:12.5px;color:var(--input);outline:none}
   .hubrow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
   .hs-ownermap{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:8px;margin-top:12px}
+  .hs-emailgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px;margin-top:8px}
+  .hs-emailgrid .hs-email{flex:1;min-width:0;font-size:12px}
+  .hs-stat{min-width:74px;font-size:11px;text-align:right}
+  .hs-ok{color:var(--pos);font-weight:700}.hs-bad{color:var(--warn);font-weight:600}
   .hs-ownerrow{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
   .hs-ownerrow span:first-child{min-width:78px}
   .hs-ownerrow select{flex:1;min-width:0}
@@ -592,15 +596,16 @@
 
     <!-- HUBSPOT -->
     <section class="blk">
-      <div class="blkhead"><h2>HubSpot</h2><span class="why">— connected on the backend (token lives in your Cloudflare Worker secret). Map reps to owners, then pull closed-won deals: value → Gross (AED), name → customer, close date → month.</span></div>
+      <div class="blkhead"><h2>HubSpot</h2><span class="why">— connected on the backend. Set each rep's HubSpot email; owners resolve automatically and closed-won deals pull in per rep.</span></div>
       <div class="panel pad">
         <div class="hub-status" id="hs_status">Connecting to HubSpot…</div>
+        <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:14px">Rep → HubSpot email (admin)</div>
+        <div id="hs_emailmap" class="hs-emailgrid"></div>
         <div class="toolrow" style="margin-top:12px">
-          <button class="btn" id="hs_loadowners">Load owners</button>
+          <button class="btn" id="hs_verify">Verify emails</button>
           <button class="btn hub" id="hs_fetch">⤓ Fetch closed-won deals</button>
           <button class="btn" id="hs_auto">Auto-pull on open: <b id="hs_autostate">on</b></button>
         </div>
-        <div id="hs_ownermap" class="hs-ownermap"></div>
         <details style="margin-top:14px">
           <summary style="cursor:pointer;font-size:12px;color:var(--muted)">CSV import (fallback)</summary>
           <div style="margin-top:8px">
@@ -1273,7 +1278,7 @@ function publishStore(){
   REPS.forEach(r=>r.deals.forEach(d=>deals.push({rep:r.name,customer:d.cust,gross:d.gross,collected:effColl(d),month:d.month||"",future:!!d.future})));
   window.CoreVStore={deals,ts:Date.now()}; window.dispatchEvent(new CustomEvent('corev:store'));
 }
-function renderAll(){ renderMatrix(); renderSummary(); renderTabs(); renderRep(); renderRefs(); publishStore(); }
+function renderAll(){ renderMatrix(); renderSummary(); renderTabs(); renderRep(); renderRefs(); publishStore(); hsSyncEmailGrid(); }
 
 /* ---------- HubSpot ---------- */
 function monthFromISO(s){ if(!s)return""; const d=new Date(s); if(isNaN(d))return""; return MON[d.getMonth()]+"/"+String(d.getFullYear()).slice(2); }
@@ -1289,54 +1294,63 @@ function addHubDeal(cust,amount,owner,month,assign){
   pushHubDeal(rep,{cust,amount,month});
 }
 
-/* ---- HubSpot — backend-connected via Cloudflare Worker (token lives in the Worker secret) ---- */
+/* ---- HubSpot — backend Worker, per-rep email → owner resolution ---- */
 const HS_PROXY="https://little-firefly-ed38.ahmedabuhakmeh.workers.dev";
-const HS_KEYS={map:"corev_hs_ownermap",auto:"corev_hs_auto"};
-let HS={owners:[],ownerMap:{},auto:true,ready:false};
-function hsLoad(){ try{ HS.ownerMap=JSON.parse(localStorage.getItem(HS_KEYS.map)||"{}"); const a=localStorage.getItem(HS_KEYS.auto); HS.auto=(a===null?true:a==="1"); }catch(_){ } }
-function hsPersist(){ try{ localStorage.setItem(HS_KEYS.map,JSON.stringify(HS.ownerMap)); localStorage.setItem(HS_KEYS.auto,HS.auto?"1":"0"); }catch(_){ } }
+const HS_KEYS={emails:"corev_hs_emails",auto:"corev_hs_auto"};
+const HS_DEFAULT_EMAILS={Marios:"marios@core-velocity.com",Fatima:"fatima@core-velocity.com",Connor:"connor@core-velocity.com",Wafiq:"wafiq@core-velocity.com",Jawdat:"jawdat@core-velocity.com"};
+let HS={emails:{},auto:true,ready:false,ownerCache:{},status:{}};
+let _hsRepSig="";
+function hsLoad(){ try{ const s=JSON.parse(localStorage.getItem(HS_KEYS.emails)||"null"); HS.emails=Object.assign({},HS_DEFAULT_EMAILS,s||{}); const a=localStorage.getItem(HS_KEYS.auto); HS.auto=(a===null?true:a==="1"); }catch(_){ HS.emails=Object.assign({},HS_DEFAULT_EMAILS); } }
+function hsPersist(){ try{ localStorage.setItem(HS_KEYS.emails,JSON.stringify(HS.emails)); localStorage.setItem(HS_KEYS.auto,HS.auto?"1":"0"); }catch(_){ } }
 function hsStatus(msg,kind){ const el=$("hs_status"); if(!el)return; el.className="hub-status"+(kind?" "+kind:""); el.innerHTML=msg; }
 function hsUrl(path){ return HS_PROXY.replace(/\/+$/,"")+path; }
 async function hsApi(path,opts={}){
   const url=path.startsWith("http")?path:hsUrl(path);
   const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{})}});
   if(r.status===401||r.status===403){ const t=await r.text();
-    if(/MISSING_SCOPES|required scopes/i.test(t)) throw new Error("The Worker's token is missing a read scope — add crm.objects.deals.read &amp; crm.objects.owners.read to the Private App, then redeploy.");
+    if(/MISSING_SCOPES|required scopes/i.test(t)) throw new Error("Worker token missing a read scope — add crm.objects.deals.read &amp; crm.objects.owners.read to the Private App.");
     throw new Error("Auth error ("+r.status+") — check the HUBSPOT_TOKEN secret in your Worker."); }
   if(!r.ok){ const t=await r.text(); throw new Error("HubSpot "+r.status+": "+t.slice(0,160)); }
   return r.json();
 }
+async function hsResolveOwner(email){
+  email=(email||"").trim().toLowerCase(); if(!email) return null;
+  if(HS.ownerCache[email]!==undefined) return HS.ownerCache[email];
+  try{ const data=await hsApi("/crm/v3/owners?email="+encodeURIComponent(email)); const id=(data.results&&data.results[0]&&data.results[0].id)||null; HS.ownerCache[email]=id; return id; }
+  catch(_){ HS.ownerCache[email]=null; return null; }
+}
 async function hsAutoConnect(){
   hsStatus("Connecting to HubSpot…");
-  try{ await hsApi("/crm/v3/owners?limit=1"); HS.ready=true; hsStatus("Connected to HubSpot ✓ via your Worker.","ok"); await hsLoadOwners(true); }
+  try{ await hsApi("/crm/v3/owners?limit=1"); HS.ready=true; hsStatus("Connected to HubSpot ✓ via your Worker.","ok");
+       if(HS.auto && Object.values(HS.emails).some(e=>e)) await hsFetchClosedWon(true); }
   catch(e){ HS.ready=false; hsStatus("Not connected: "+e.message+" — check the Worker is deployed and the HUBSPOT_TOKEN secret is set.","err"); }
 }
-async function hsLoadOwners(silent){
-  if(!silent) hsStatus("Loading HubSpot owners…");
-  try{
-    const all=[]; let after=null,guard=0;
-    do{ const data=await hsApi("/crm/v3/owners?limit=100"+(after?"&after="+encodeURIComponent(after):""));
-        (data.results||[]).forEach(o=>all.push({id:o.id,email:o.email||"",name:((o.firstName||"")+" "+(o.lastName||"")).trim()||o.email||"(unnamed)"}));
-        after=data.paging&&data.paging.next&&data.paging.next.after; guard++; }while(after&&guard<10);
-    all.sort((a,b)=>a.name.localeCompare(b.name)); HS.owners=all; hsRenderOwnerMap();
-    const mappedN=REPS.filter(r=>HS.ownerMap[r.name]).length;
-    if(HS.auto && mappedN){ await hsFetchClosedWon(true); }
-    else if(!silent){ hsStatus("Loaded "+all.length+" owners. Map each rep to a HubSpot owner, then fetch.","ok"); }
-  }catch(e){ hsStatus("Could not load owners: "+e.message,"err"); }
+function hsRenderEmailMap(){
+  const box=$("hs_emailmap"); if(!box)return;
+  box.innerHTML=REPS.map(r=>{
+    const st=HS.status[r.name];
+    const badge=(st===undefined||st===null)?"":(st?`<span class="hs-ok">✓</span>`:`<span class="hs-bad">not found</span>`);
+    return `<div class="hs-ownerrow"><span>${r.name}</span><input class="hub-in hs-email" data-rep="${r.name}" type="email" placeholder="name@core-velocity.com" value="${HS.emails[r.name]||""}"><span class="hs-stat">${badge}</span></div>`;
+  }).join("");
+  box.querySelectorAll("input.hs-email").forEach(inp=>inp.addEventListener("change",e=>{const rep=e.target.dataset.rep,v=e.target.value.trim(); HS.emails[rep]=v; delete HS.status[rep]; hsPersist(); hsRenderEmailMap();}));
 }
-function hsRenderOwnerMap(){
-  const box=$("hs_ownermap"); if(!box)return; if(!HS.owners.length){ box.innerHTML=""; return; }
-  const opts=s=>'<option value="">— not mapped —</option>'+HS.owners.map(o=>`<option value="${o.id}" ${o.id===s?"selected":""}>${o.name}${o.email?" ("+o.email+")":""}</option>`).join("");
-  box.innerHTML=REPS.map(r=>`<div class="hs-ownerrow"><span>${r.name}</span><span style="color:var(--muted)">→</span><select class="d-sel" data-rep="${r.name}">${opts(HS.ownerMap[r.name]||"")}</select></div>`).join("");
-  box.querySelectorAll("select[data-rep]").forEach(s=>s.addEventListener("change",e=>{const rep=e.target.dataset.rep,v=e.target.value; if(v)HS.ownerMap[rep]=v; else delete HS.ownerMap[rep]; hsPersist();}));
+function hsSyncEmailGrid(){ const sig=REPS.map(r=>r.name).join("|"); if(sig!==_hsRepSig){ _hsRepSig=sig; hsRenderEmailMap(); } }
+async function hsVerify(){
+  hsStatus("Resolving HubSpot owners from emails…");
+  for(const r of REPS){ const em=HS.emails[r.name]; if(!em){ HS.status[r.name]=null; continue; } const id=await hsResolveOwner(em); HS.status[r.name]= id?("owner "+id):false; }
+  hsRenderEmailMap();
+  const withE=REPS.filter(r=>HS.emails[r.name]).length, ok=REPS.filter(r=>HS.status[r.name]&&HS.status[r.name]!==false).length;
+  hsStatus(`Resolved ${ok} of ${withE} email${withE===1?"":"s"} to HubSpot owners.`, ok?"ok":"err");
 }
 async function hsFetchClosedWon(silent){
-  const mapped=REPS.filter(r=>HS.ownerMap[r.name]);
-  if(!mapped.length){ hsStatus("Map at least one rep to a HubSpot owner first (Load owners).","err"); return; }
-  if(!silent) hsStatus("Fetching closed-won deals…"); let total=0,added=0;
+  const withEmail=REPS.filter(r=>HS.emails[r.name]);
+  if(!withEmail.length){ hsStatus("Add at least one rep's HubSpot email below.","err"); return; }
+  if(!silent) hsStatus("Fetching closed-won deals…"); let total=0,added=0,reps=0;
   try{
-    for(const rep of mapped){
-      const ownerId=HS.ownerMap[rep.name]; let after,guard=0;
+    for(const rep of withEmail){
+      const ownerId=await hsResolveOwner(HS.emails[rep.name]); HS.status[rep.name]= ownerId?("owner "+ownerId):false;
+      if(!ownerId) continue; reps++;
+      let after,guard=0;
       do{
         const body={filterGroups:[{filters:[{propertyName:"hubspot_owner_id",operator:"EQ",value:ownerId},{propertyName:"dealstage",operator:"NEQ",value:"closedlost"}]}],
           properties:["dealname","amount","closedate","dealstage","hs_is_closed_won","hs_is_closed"],sorts:[{propertyName:"closedate",direction:"DESCENDING"}],limit:100};
@@ -1349,7 +1363,8 @@ async function hsFetchClosedWon(silent){
         after=data.paging&&data.paging.next&&data.paging.next.after; guard++;
       }while(after&&guard<50);
     }
-    hsStatus(`Synced ${total} closed-won deal${total===1?"":"s"} across ${mapped.length} rep${mapped.length===1?"":"s"} (${added} new, rest updated).`,"ok");
+    hsRenderEmailMap();
+    hsStatus(`Synced ${total} closed-won deal${total===1?"":"s"} across ${reps} rep${reps===1?"":"s"} (${added} new, rest updated).`,"ok");
     renderAll();
   }catch(e){ hsStatus("Fetch failed: "+e.message,"err"); }
 }
@@ -1480,7 +1495,7 @@ $("addDeal").addEventListener("click",()=>{REPS[sel].deals.push({type:"B2C",cust
 $("addRef").addEventListener("click",()=>{REFS.push({cust:"New referral",gross:0,coll:0,month:""});renderRefs();renderSummary();});
 $("ref_pdf").addEventListener("click",referralPDF);
 $("ref_email").addEventListener("click",emailRef);
-$("hs_loadowners").addEventListener("click",()=>hsLoadOwners(false));
+$("hs_verify").addEventListener("click",hsVerify);
 $("hs_fetch").addEventListener("click",()=>hsFetchClosedWon(false));
 $("hs_auto").addEventListener("click",hsToggleAuto);
 $("hs_import").addEventListener("click",()=>importCSVText($("hs_csv").value));
