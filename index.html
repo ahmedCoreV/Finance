@@ -466,6 +466,25 @@
   .ctrls .f label{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:5px}
   .ctrls .f input{width:84px;border:1px solid var(--line);background:var(--input-soft);border-radius:7px;padding:7px 9px;font-family:"JetBrains Mono";font-size:13.5px;font-weight:600;color:var(--input);text-align:right;outline:none}
   .ctrls .f input:focus{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .ms-editor{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  .ms-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .ms-head h3{font-family:"Space Grotesk";font-size:14px;margin:0;color:var(--ink);font-weight:600}
+  .ms-total{font-size:11px;font-weight:700;border-radius:6px;padding:3px 9px}
+  .ms-total.ok{background:var(--pos-soft);color:var(--pos)}
+  .ms-total.warn{background:var(--warn-soft);color:var(--warn)}
+  .btn.ghost{color:var(--ink)}
+  .ms-cols{display:flex;gap:8px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px;padding:0 2px}
+  .ms-cols span:nth-child(1){flex:1 1 180px;min-width:120px}
+  .ms-cols span:nth-child(2){width:78px}.ms-cols span:nth-child(3){width:96px}.ms-cols span:nth-child(4){width:30px}
+  .ms-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .ms-row .rm-in{border:1px solid var(--line);background:var(--input-soft);border-radius:7px;padding:7px 9px;font-family:"JetBrains Mono";font-size:13px;font-weight:600;color:var(--input);outline:none}
+  .ms-row .rm-in:focus{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .ms-name{flex:1 1 180px;min-width:120px;text-align:left}
+  .ms-fld{display:flex;align-items:center;gap:4px}
+  .ms-fld .ms-p,.ms-fld .ms-d{width:60px;text-align:right}
+  .ms-fld .affx{font-size:11px;color:var(--muted)}
+  .ms-del{flex:0 0 auto}
+  .ms-hint{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.5}
   .ctrls .grow{flex:1}
   .synced{font-size:12px;color:var(--muted)}
   .synced b{color:var(--text)}
@@ -577,13 +596,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.16.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.17.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.16.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.17.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -974,11 +993,14 @@
       <div class="panel pad">
         <div class="ctrls">
           <div class="f"><label>Due-soon window</label><input id="rm_soon" type="number" step="1"><span style="font-size:11px;color:var(--muted);margin-left:4px">days</span></div>
-          <div class="f"><label>Acceptance (20%)</label><input id="rm_off1" type="number" step="1"><span style="font-size:11px;color:var(--muted);margin-left:4px">days</span></div>
-          <div class="f"><label>PO / contract (50%)</label><input id="rm_off2" type="number" step="1"><span style="font-size:11px;color:var(--muted);margin-left:4px">days</span></div>
-          <div class="f"><label>Delivery (30%)</label><input id="rm_off3" type="number" step="1"><span style="font-size:11px;color:var(--muted);margin-left:4px">days</span></div>
           <div class="grow"></div>
           <div style="text-align:right"><div class="synced" id="rm-synced"></div><button class="btn" id="rm-resync" style="margin-top:6px">↻ Re-sync from commission</button></div>
+        </div>
+        <div class="ms-editor">
+          <div class="ms-head"><h3>Payment milestones</h3><span class="ms-total" id="rm_mstotal"></span><span style="flex:1"></span><button class="btn ghost" id="rm_msadd">+ Add milestone</button></div>
+          <div class="ms-cols"><span>Milestone</span><span>Share</span><span>Reminder offset</span><span></span></div>
+          <div id="rm_ms"></div>
+          <div class="ms-hint">Each customer deal is split across these milestones (anchored on its closed month). Shares should total 100%. The reminder offset is days after the closed month that each milestone's reminder is due.</div>
         </div>
       </div>
     </section>
@@ -1003,7 +1025,7 @@
 
     <!-- RECEIVABLES -->
     <section class="blk">
-      <div class="blkhead"><h2>Receivables — customer milestones</h2><span class="why">— 20% acceptance · 50% PO/contract · 30% delivery. Paid status follows each deal's collected % from commission.</span></div>
+      <div class="blkhead"><h2>Receivables — customer milestones</h2><span class="why">— configurable payment milestones (set above). Paid status follows each deal's collected % from commission.</span></div>
       <div class="panel scroll">
         <table class="data">
           <thead><tr>
@@ -1032,7 +1054,7 @@
       </div>
     </section>
 
-    <div class="note"><span class="ic">i</span><span>Receivables are generated live from the Commission tab: each deal becomes a 20/50/30 milestone schedule anchored on its closed month, and milestones flip to <b>Paid</b> as the deal's collected % rises (20% collected pays acceptance, 70% pays through PO, 100% clears delivery). Edit a due date or override Paid here and it sticks; payables are fully manual.</span></div>
+    <div class="note"><span class="ic">i</span><span>Receivables are generated live from the Commission tab: each deal is split across the <b>configurable milestones</b> above, anchored on its closed month. Milestones flip to <b>Paid</b> as the deal's collected % passes each cumulative milestone share. Edit a due date or override Paid here and it sticks; payables are fully manual.</span></div>
   </div>
 
 </div>
@@ -2448,8 +2470,12 @@ function parseMonth(s){
   return new Date(today.getFullYear(),today.getMonth(),1);
 }
 
-let CTRL={soon:7, off:[0,30,60]};
-const MS=[["Acceptance",0.20],["PO / Contract",0.50],["Delivery",0.30]];
+function defaultMs(){ return [
+  {name:"Acceptance", pct:0.20, off:0},
+  {name:"PO / Contract", pct:0.50, off:30},
+  {name:"Delivery", pct:0.30, off:60},
+]; }
+let CTRL={soon:7, ms:defaultMs()};
 let RECV_OV={};            // overrides keyed by milestone
 let PAY=[
   {payee:"OxeFit", desc:"Hardware PO settlement", amount:150000, due:iso(addDays(today,17)), recur:"One-time", paid:false},
@@ -2460,18 +2486,18 @@ let PAY=[
 
 function receivables(){
   const store=(window.CoreVStore&&window.CoreVStore.deals)||[];
-  const rows=[];
+  const rows=[]; const ms=CTRL.ms||[];
   store.forEach((d,di)=>{
     if(!d.gross) return;
     const anchor=parseMonth(d.month); let cum=0;
-    MS.forEach((ms,mi)=>{
-      const [name,pct]=ms; cum+=pct;
+    ms.forEach((m,mi)=>{
+      const pct=(+m.pct)||0; cum+=pct;
       const key=d.customer+"|"+d.month+"|"+di+"|"+mi;
       const ov=RECV_OV[key]||{};
-      const due = ov.due ? new Date(ov.due+"T00:00:00") : addDays(anchor,CTRL.off[mi]);
+      const due = ov.due ? new Date(ov.due+"T00:00:00") : addDays(anchor,(+m.off)||0);
       const autoPaid=(d.collected||0) >= cum-1e-9;
       const paid = ov.paid!=null ? ov.paid : autoPaid;
-      rows.push({key,rep:d.rep,customer:d.customer,name,pct,amount:d.gross*pct,due,paid});
+      rows.push({key,rep:d.rep,customer:d.customer,name:m.name,pct,amount:d.gross*pct,due,paid});
     });
   });
   return rows;
@@ -2602,26 +2628,64 @@ function renderPay(){
   $("rm-payBody").querySelectorAll(".del").forEach(b=>b.addEventListener("click",e=>{PAY.splice(+e.target.dataset.i,1);renderPay();renderDashboard();rmChanged();}));
 }
 
+function msTotalBadge(){
+  const total=(CTRL.ms||[]).reduce((a,m)=>a+((+m.pct)||0),0);
+  const el=$("rm_mstotal"); if(!el) return;
+  const ok=Math.abs(total-1)<1e-9; el.textContent="Total "+Math.round(total*100)+"%"; el.className="ms-total "+(ok?"ok":"warn");
+}
+function renderMsEditor(){
+  if(!$("rm_ms")) return;
+  const ms=CTRL.ms||[];
+  $("rm_ms").innerHTML=ms.map((m,i)=>`<div class="ms-row" data-i="${i}">
+      <input class="rm-in ms-name" data-k="name" value="${(m.name||'').replace(/"/g,'&quot;')}" placeholder="Milestone name">
+      <div class="ms-fld"><input class="rm-in ms-p" type="number" step="1" data-k="pct" value="${Math.round(((+m.pct)||0)*100)}"><span class="affx">%</span></div>
+      <div class="ms-fld"><input class="rm-in ms-d" type="number" step="1" data-k="off" value="${(+m.off)||0}"><span class="affx">days</span></div>
+      <button class="del ms-del" title="Remove milestone">×</button>
+    </div>`).join("");
+  msTotalBadge();
+  $("rm_ms").querySelectorAll("[data-k]").forEach(el=>{
+    el.addEventListener("input",e=>{
+      const i=+e.target.closest(".ms-row").dataset.i, k=e.target.dataset.k;
+      if(k==="pct") CTRL.ms[i].pct=(parseFloat(e.target.value)||0)/100;
+      else if(k==="off") CTRL.ms[i].off=parseInt(e.target.value)||0;
+      else CTRL.ms[i].name=e.target.value;
+      msTotalBadge(); renderDashboard(); renderRecv(); rmChanged();   // editor not re-rendered → keeps input focus
+    });
+  });
+  $("rm_ms").querySelectorAll(".ms-del").forEach(b=>b.addEventListener("click",e=>{
+    const i=+e.target.closest(".ms-row").dataset.i; (CTRL.ms||[]).splice(i,1);
+    renderMsEditor(); renderDashboard(); renderRecv(); rmChanged();
+  }));
+}
+
 function syncedNote(){
   const n=((window.CoreVStore&&window.CoreVStore.deals)||[]).filter(d=>d.gross).length;
   $("rm-synced").innerHTML=`Synced <b>${n}</b> customer deal${n===1?"":"s"} from Commission`;
 }
-function renderAll(){ syncedNote(); renderDashboard(); renderRecv(); renderPay(); }
+function renderAll(){ syncedNote(); renderMsEditor(); renderDashboard(); renderRecv(); renderPay(); }
 
 $("rm-addPay").addEventListener("click",()=>{PAY.push({payee:"New payee",desc:"",amount:0,due:iso(addDays(today,14)),recur:"One-time",paid:false});renderPay();renderDashboard();rmChanged();});
 $("rm-resync").addEventListener("click",renderAll);
-[["rm_soon","soon"]].forEach(()=>{});
-$("rm_soon").value=CTRL.soon; $("rm_off1").value=CTRL.off[0]; $("rm_off2").value=CTRL.off[1]; $("rm_off3").value=CTRL.off[2];
+$("rm_msadd").addEventListener("click",()=>{ if(!Array.isArray(CTRL.ms))CTRL.ms=defaultMs(); CTRL.ms.push({name:"New milestone",pct:0,off:0}); renderMsEditor(); renderDashboard(); renderRecv(); rmChanged(); });
+$("rm_soon").value=CTRL.soon;
 $("rm_soon").addEventListener("input",e=>{CTRL.soon=parseInt(e.target.value)||0;renderAll();rmChanged();});
-$("rm_off1").addEventListener("input",e=>{CTRL.off[0]=parseInt(e.target.value)||0;renderAll();rmChanged();});
-$("rm_off2").addEventListener("input",e=>{CTRL.off[1]=parseInt(e.target.value)||0;renderAll();rmChanged();});
-$("rm_off3").addEventListener("input",e=>{CTRL.off[2]=parseInt(e.target.value)||0;renderAll();rmChanged();});
 window.addEventListener("corev:store",renderAll);
 
 function rmChanged(){ if(window.CoreVSync) window.CoreVSync.changed(); }
 if(window.CoreVSync) window.CoreVSync.register('reminders',
   ()=>({PAY,CTRL}),
-  env=>{ try{ if(Array.isArray(env.PAY))PAY=env.PAY; if(env.CTRL&&Array.isArray(env.CTRL.off))CTRL=env.CTRL; renderAll(); }catch(_){} });
+  env=>{ try{
+    if(Array.isArray(env.PAY))PAY=env.PAY;
+    if(env.CTRL && typeof env.CTRL==='object'){
+      const c=env.CTRL;
+      if(typeof c.soon==='number') CTRL.soon=c.soon;
+      if(Array.isArray(c.ms)) CTRL.ms=c.ms;
+      else if(Array.isArray(c.off)){ const d=defaultMs(); CTRL.ms=d.map((m,i)=>({...m, off:(c.off[i]!=null?c.off[i]:m.off)})); } // migrate legacy
+    }
+    if(!Array.isArray(CTRL.ms)) CTRL.ms=defaultMs();
+    $("rm_soon").value=CTRL.soon;
+    renderAll();
+  }catch(_){} });
 
 renderAll();
 
