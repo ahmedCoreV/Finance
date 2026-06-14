@@ -500,6 +500,9 @@
   .rm-modal-sub{font-size:12px;color:var(--muted);margin-top:3px}
   .rm-modal-x{cursor:pointer;border:0;background:none;font-size:22px;line-height:1;color:var(--muted)}
   .rm-modal-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
+  .oxe-cost{width:120px;text-align:right;border:1px solid var(--line);background:var(--input-soft);border-radius:7px;padding:7px 9px;font-family:"JetBrains Mono";font-size:13px;font-weight:600;color:var(--input);outline:none}
+  .oxe-cost:focus{border-color:var(--input);box-shadow:0 0 0 3px rgba(28,78,216,.12)}
+  .oxe-tot{font-size:12px;color:var(--muted)}
   .ctrls .grow{flex:1}
   .synced{font-size:12px;color:var(--muted)}
   .synced b{color:var(--text)}
@@ -611,13 +614,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.18.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.19.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.18.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.19.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -1055,7 +1058,29 @@
 
     <!-- PAYABLES -->
     <section class="blk">
-      <div class="blkhead"><h2>Payables — money owed out</h2><span class="why">— vendors, OxeFit, logistics, etc.</span></div>
+      <div class="blkhead"><h2>Payables — money owed out</h2><span class="why">— OxeFit is back-to-back with client deals; other vendors are manual.</span></div>
+
+      <div class="panel pad">
+        <div class="ctrls">
+          <div class="f"><label>OxeFit cost basis</label><input id="rm_oxeratio" type="number" step="1"><span style="font-size:11px;color:var(--muted);margin-left:4px">% of deal</span></div>
+          <div class="grow"></div>
+          <div class="oxe-tot" id="rm-oxeTot" style="text-align:right"></div>
+        </div>
+        <div class="ms-hint">OxeFit owes follow each client deal <b>back-to-back</b>: same milestone schedule &amp; dates, and each milestone is marked paid to OxeFit as the client collects it. The amount is OxeFit's cost — defaulting to the basis % of the deal, editable per deal to the real cost.</div>
+      </div>
+
+      <div class="panel scroll" style="margin-top:12px">
+        <table class="data">
+          <thead><tr>
+            <th class="l">OxeFit — by client deal</th><th class="l"></th><th>OxeFit cost</th>
+            <th class="l">Due date</th><th>Status</th><th>Paid</th>
+          </tr></thead>
+          <tbody id="rm-oxeBody"></tbody>
+          <tfoot id="rm-oxeFoot"></tfoot>
+        </table>
+      </div>
+
+      <div class="blkhead" style="margin-top:20px"><h2 style="font-size:16px">Other payables</h2><span class="why">— logistics, marketing &amp; other vendors (manual).</span></div>
       <div class="panel scroll">
         <table class="data">
           <thead><tr>
@@ -1069,7 +1094,7 @@
       </div>
     </section>
 
-    <div class="note"><span class="ic">i</span><span>Receivables are generated live from the Commission tab: each deal is split across the <b>configurable milestones</b> above, anchored on its closed month. Milestones flip to <b>Paid</b> as the deal's collected % passes each cumulative milestone share. Edit a due date or override Paid here and it sticks; payables are fully manual.</span></div>
+    <div class="note"><span class="ic">i</span><span>Payables: <b>OxeFit is back-to-back</b> — every client deal automatically creates a matching OxeFit obligation on the same milestone schedule and dates, settled as the client pays each milestone. Set the cost basis % once and override the cost per deal where you know the exact figure. Other vendors (logistics, marketing, etc.) are added manually below.</span></div>
   </div>
 
   <div id="rm-msModal" class="rm-modal" style="display:none">
@@ -2505,13 +2530,12 @@ function parseMonth(s){
 }
 
 function defaultDef(){ return [ {name:"PO / Contract", pct:1.0, off:0} ]; }
-let CTRL={soon:7, def:defaultDef(), perDeal:{}};
+let CTRL={soon:7, def:defaultDef(), perDeal:{}, oxeRatio:0.50, oxeOv:{}};
 let RECV_OV={};            // overrides keyed by milestone
+let OXE_OV={};             // OxeFit milestone paid overrides (local)
 function dealKey(d){ return d.hsId ? ("hs:"+d.hsId) : ("m:"+(d.rep||"")+"|"+(d.customer||"")+"|"+(d.month||"")); }
 function dealMs(d){ const c=CTRL.perDeal&&CTRL.perDeal[dealKey(d)]; return (Array.isArray(c)&&c.length)?c:(CTRL.def||defaultDef()); }
 let PAY=[
-  {payee:"OxeFit", desc:"Hardware PO settlement", amount:150000, due:iso(addDays(today,17)), recur:"One-time", paid:false},
-  {payee:"OxeFit", desc:"Platform / subscription", amount:22000, due:iso(addDays(today,5)), recur:"Monthly", paid:false},
   {payee:"Logistics partner", desc:"Inbound shipping", amount:9500, due:iso(addDays(today,-3)), recur:"One-time", paid:false},
   {payee:"Marketing agency", desc:"Retainer", amount:18000, due:iso(addDays(today,28)), recur:"Monthly", paid:false},
 ];
@@ -2534,6 +2558,26 @@ function receivableGroups(){
 function receivables(){
   const out=[]; receivableGroups().forEach(g=>g.rows.forEach(r=>out.push({...r, rep:g.deal.rep, customer:g.deal.customer}))); return out;
 }
+function oxeCostOf(d){ const k=dealKey(d); const ov=CTRL.oxeOv&&CTRL.oxeOv[k]; return (ov!=null)?ov:(d.gross*(CTRL.oxeRatio||0)); }
+function oxefitGroups(){
+  const store=(window.CoreVStore&&window.CoreVStore.deals)||[];
+  return store.filter(d=>d.gross).map(d=>{
+    const k=dealKey(d), ms=dealMs(d), anchor=parseMonth(d.month), cost=oxeCostOf(d); let cum=0;
+    const rows=ms.map((m,mi)=>{
+      const pct=(+m.pct)||0; cum+=pct;
+      const ckey=k+"|"+mi, cov=RECV_OV[ckey]||{};
+      const due = cov.due ? new Date(cov.due+"T00:00:00") : addDays(anchor,(+m.off)||0);   // mirror client milestone date
+      const okey="oxe:"+ckey, oov=OXE_OV[okey]||{};
+      const autoPaid=(d.collected||0) >= cum-1e-9;                                          // back-to-back: pay OxeFit as client collects
+      const paid = oov.paid!=null ? oov.paid : autoPaid;
+      return {key:okey,name:m.name,pct,amount:cost*pct,due,paid};
+    });
+    return {deal:d, key:k, cost, rows};
+  });
+}
+function oxefitPayables(){
+  const out=[]; oxefitGroups().forEach(g=>g.rows.forEach(r=>out.push({...r, payee:"OxeFit", customer:g.deal.customer, desc:(g.deal.customer||"")+" · "+r.name}))); return out;
+}
 function statusOf(due,paid){
   if(paid) return "paid";
   const days=Math.floor((due-today)/DAY);
@@ -2544,23 +2588,26 @@ function statusOf(due,paid){
 const STLBL={paid:"Paid",over:"Overdue",soon:"Due soon",up:"Upcoming"};
 
 function renderDashboard(){
-  const recv=receivables(), pay=PAY.map(p=>({...p,dueD:new Date(p.due+"T00:00:00")}));
-  const recvOut=recv.filter(r=>!r.paid), payOut=pay.filter(p=>!p.paid);
+  const recv=receivables();
+  const payManual=PAY.map(p=>({...p,due:new Date(p.due+"T00:00:00")}));
+  const oxe=oxefitPayables();   // each has due (Date), amount, paid, payee, desc, customer, name
+  const recvOut=recv.filter(r=>!r.paid);
+  const payOut=[...payManual.filter(p=>!p.paid), ...oxe.filter(p=>!p.paid)];
   const recvSum=recvOut.reduce((a,r)=>a+r.amount,0);
   const paySum=payOut.reduce((a,p)=>a+p.amount,0);
   const overR=recvOut.filter(r=>statusOf(r.due,false)==="over").reduce((a,r)=>a+r.amount,0);
-  const overP=payOut.filter(p=>statusOf(p.dueD,false)==="over").reduce((a,p)=>a+p.amount,0);
+  const overP=payOut.filter(p=>statusOf(p.due,false)==="over").reduce((a,p)=>a+p.amount,0);
   const net=recvSum-paySum;
   $("rm-kpis").innerHTML=[
     {l:"Receivable outstanding",v:fmt(recvSum),m:recvOut.length+" milestones",c:"posv"},
-    {l:"Payable outstanding",v:fmt(paySum),m:payOut.length+" payments",c:""},
+    {l:"Payable outstanding",v:fmt(paySum),m:payOut.length+" payments · incl OxeFit",c:""},
     {l:"Net position",v:(net<0?"−":"")+fmt(Math.abs(net)),m:net>=0?"net inflow":"net outflow",c:net>=0?"posv":"neg"},
     {l:"Overdue total",v:fmt(overR+overP),m:"in "+fmt(overR)+" · out "+fmt(overP),c:overR+overP>0?"neg":""},
   ].map(k=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val tnum">${k.v}</div><div class="meta">${k.m}</div></div>`).join("");
   ROOT.querySelectorAll("#rm-kpis .kpi").forEach(k=>{k.classList.remove("flash");void k.offsetWidth;k.classList.add("flash");});
 
-  renderTimeline(recvOut, payOut.map(p=>({...p,due:p.dueD})));
-  renderFlags(recvOut, payOut.map(p=>({...p,due:p.dueD})));
+  renderTimeline(recvOut, payOut);
+  renderFlags(recvOut, payOut);
 }
 
 function renderTimeline(recv, pay){
@@ -2641,6 +2688,40 @@ function renderRecv(){
   });
   $("rm-recvBody").querySelectorAll(".ms-edit").forEach(b=>b.addEventListener("click",e=>{
     openMsModal(decodeURIComponent(e.currentTarget.dataset.dk));
+  }));
+}
+
+function renderOxe(){
+  if(!$("rm-oxeBody")) return;
+  const groups=oxefitGroups(); let body="",out=0,total=0;
+  groups.forEach(g=>{
+    const d=g.deal; total+=g.cost;
+    body+=`<tr class="deal-grp" data-dk="${encodeURIComponent(g.key)}">
+      <td class="l"><span class="dg-cust">${d.customer||"—"}</span> <span class="dg-meta">${d.rep||""}${d.month?" · "+d.month:""} · client ${fmt(d.gross)}</span></td>
+      <td class="l"><span class="sched-chip custom">back-to-back</span></td>
+      <td><input class="rm-in oxe-cost" type="number" data-dk="${encodeURIComponent(g.key)}" value="${Math.round(g.cost)}" title="OxeFit cost for this deal"></td>
+      <td class="l" colspan="3"><span class="dg-meta">OxeFit cost — defaults to ${Math.round((CTRL.oxeRatio||0)*100)}% of the deal; edit to set the real cost</span></td>
+    </tr>`;
+    g.rows.forEach(r=>{
+      const st=statusOf(r.due,r.paid); if(!r.paid) out+=r.amount;
+      body+=`<tr data-key="${r.key}">
+        <td class="l"></td>
+        <td class="l ms-sub">↳ <span class="ms">${r.name} · ${Math.round(r.pct*100)}%</span></td>
+        <td>${fmt(r.amount)}</td>
+        <td class="l" style="color:var(--muted)">${iso(r.due)}</td>
+        <td><span class="st ${st}">${STLBL[st]}</span></td>
+        <td><input type="checkbox" data-k="paid" ${r.paid?"checked":""}></td>
+      </tr>`;
+    });
+  });
+  $("rm-oxeBody").innerHTML=body || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">No client deals yet — OxeFit payables appear automatically from the Commission tab.</td></tr>`;
+  $("rm-oxeFoot").innerHTML=groups.length?`<tr><td class="l">Outstanding to OxeFit</td><td></td><td>${fmt(out)}</td><td></td><td></td><td></td></tr>`:"";
+  const tot=$("rm-oxeTot"); if(tot) tot.innerHTML=`Total OxeFit cost: <b>${fmt(total)}</b> · outstanding <b>${fmt(out)}</b>`;
+  $("rm-oxeBody").querySelectorAll(".oxe-cost").forEach(inp=>inp.addEventListener("change",e=>{
+    const k=decodeURIComponent(e.target.dataset.dk); CTRL.oxeOv=CTRL.oxeOv||{}; CTRL.oxeOv[k]=parseFloat(e.target.value)||0; renderOxe(); renderDashboard(); rmChanged();
+  }));
+  $("rm-oxeBody").querySelectorAll("tr[data-key] [data-k]").forEach(el=>el.addEventListener("change",e=>{
+    const key=e.target.closest("tr").dataset.key; OXE_OV[key]=OXE_OV[key]||{}; OXE_OV[key].paid=e.target.checked; renderOxe(); renderDashboard();
   }));
 }
 
@@ -2743,7 +2824,7 @@ function syncedNote(){
   const n=((window.CoreVStore&&window.CoreVStore.deals)||[]).filter(d=>d.gross).length;
   $("rm-synced").innerHTML=`Synced <b>${n}</b> customer deal${n===1?"":"s"} from Commission`;
 }
-function renderAll(){ syncedNote(); renderMsEditor(); renderDashboard(); renderRecv(); renderPay(); }
+function renderAll(){ syncedNote(); renderMsEditor(); renderDashboard(); renderRecv(); renderOxe(); renderPay(); }
 
 $("rm-addPay").addEventListener("click",()=>{PAY.push({payee:"New payee",desc:"",amount:0,due:iso(addDays(today,14)),recur:"One-time",paid:false});renderPay();renderDashboard();rmChanged();});
 $("rm-resync").addEventListener("click",renderAll);
@@ -2762,6 +2843,8 @@ $("rm-msSave").addEventListener("click",()=>{
 });
 $("rm_soon").value=CTRL.soon;
 $("rm_soon").addEventListener("input",e=>{CTRL.soon=parseInt(e.target.value)||0;renderAll();rmChanged();});
+$("rm_oxeratio").value=Math.round((CTRL.oxeRatio||0)*100);
+$("rm_oxeratio").addEventListener("input",e=>{CTRL.oxeRatio=(parseFloat(e.target.value)||0)/100;renderOxe();renderDashboard();rmChanged();});
 window.addEventListener("corev:store",renderAll);
 
 function rmChanged(){ if(window.CoreVSync) window.CoreVSync.changed(); }
@@ -2775,10 +2858,15 @@ if(window.CoreVSync) window.CoreVSync.register('reminders',
       if(Array.isArray(c.def)) CTRL.def=c.def;
       else if(Array.isArray(c.ms)) CTRL.def=c.ms;   // migrate prior global template
       if(c.perDeal && typeof c.perDeal==='object') CTRL.perDeal=c.perDeal;
+      if(typeof c.oxeRatio==='number') CTRL.oxeRatio=c.oxeRatio;
+      if(c.oxeOv && typeof c.oxeOv==='object') CTRL.oxeOv=c.oxeOv;
     }
     if(!Array.isArray(CTRL.def)) CTRL.def=defaultDef();
     if(!CTRL.perDeal) CTRL.perDeal={};
+    if(typeof CTRL.oxeRatio!=='number') CTRL.oxeRatio=0.50;
+    if(!CTRL.oxeOv) CTRL.oxeOv={};
     $("rm_soon").value=CTRL.soon;
+    $("rm_oxeratio").value=Math.round((CTRL.oxeRatio||0)*100);
     renderAll();
   }catch(_){} });
 
