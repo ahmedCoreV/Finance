@@ -199,6 +199,7 @@
   .dl-del:hover{border-color:var(--warn);color:var(--warn)}
   .barpct{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--muted);margin-top:4px;white-space:nowrap}
   .dealgive{margin:16px 0 2px;background:var(--input-soft);border:1px solid #CFE0FF;color:var(--ink);border-radius:10px;padding:11px 14px;font-size:12.5px;line-height:1.5}
+  .seg-channel{background:#8A6FE8}
 
 
   :root{
@@ -559,13 +560,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.11.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.12.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.11.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.12.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -582,6 +583,7 @@
     <div class="costnav">
       <button data-cs="cost-catalog" class="active">Catalog &amp; portfolio</button>
       <button data-cs="cost-deal">Deal builder</button>
+      <button data-cs="cost-dealer">Dealer</button>
     </div>
 
     <div id="cost-catalog" class="costsub active">
@@ -723,6 +725,74 @@
         <span>Pick any catalog product or service, set the quantity, then flex the <b>unit price</b> or <b>discount</b> — every line shows its own gross &amp; net margin and the KPI cards + deal total update live. The deal-wide discount applies on top of per-line discounts. <b>Free units</b> are treated as a give-away discount: they are <b>not</b> taken out of revenue — instead their cost (free units × average OxeFit unit cost) is <b>deducted from net profit</b>. Unit costs come straight from the catalog cost stack.</span>
       </div>
     </div><!-- /cost-deal -->
+
+    <div id="cost-dealer" class="costsub">
+      <section class="assumptions">
+        <div class="head">
+          <h2>Dealer (OxePartner) costing</h2>
+          <span class="why">— channel model: dealer margin + dealer sales commission sit on top of CoreV's cost stack. Uses the catalog products and the global exchange rate above.</span>
+        </div>
+        <div class="agrid">
+          <div class="field"><label>Dealer tier</label>
+            <div class="inputwrap"><select id="dg_tier" class="cell-in" style="text-align:left;width:100%"></select></div></div>
+          <div class="field"><label>Dealer margin (tier)</label>
+            <div class="inputwrap"><input id="dg_margin" type="number" readonly><span class="affix">%</span></div></div>
+          <div class="field"><label>Dealer sales commission</label>
+            <div class="inputwrap"><input id="dg_comm" type="number" step="0.5"><span class="affix">%</span></div></div>
+          <div class="field"><label>CoreV ISR commission</label>
+            <div class="inputwrap"><input id="dg_isr" type="number" step="0.1"><span class="affix">%</span></div></div>
+          <div class="field"><label>ISR cap</label>
+            <div class="inputwrap"><span class="affix pre">AED</span><input id="dg_isrcap" type="number" step="50"></div></div>
+          <div class="field"><label>CoreV B2B commission</label>
+            <div class="inputwrap"><input id="dg_b2b" type="number" step="0.5"><span class="affix">%</span></div></div>
+          <div class="field"><label>Base referral</label>
+            <div class="inputwrap"><input id="dg_ref" type="number" step="0.5"><span class="affix">%</span></div></div>
+          <div class="field"><label>Operational cost</label>
+            <div class="inputwrap"><input id="dg_ops" type="number" step="0.5"><span class="affix">%</span></div></div>
+          <div class="field"><label>OxeFit contribution</label>
+            <div class="inputwrap"><input id="dg_contrib" type="number" step="0.5"><span class="affix">%</span></div></div>
+        </div>
+      </section>
+
+      <section class="kpis" id="dgkpis"></section>
+
+      <section class="tablecard">
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="l">Product / SKU</th>
+                <th>Selling price<span class="u">AED</span></th>
+                <th>Discount<span class="u">AED · input</span></th>
+                <th>Net revenue<span class="u">AED</span></th>
+                <th>OxeFit cost<span class="u">AED</span></th>
+                <th>GP before channels<span class="u">AED · %</span></th>
+                <th>Dealer margin<span class="u">AED</span></th>
+                <th>Dealer comm<span class="u">AED</span></th>
+                <th>CoreV gross<span class="u">AED · %</span></th>
+                <th>CoreV cost<span class="u">ISR+B2B+ref+ops</span></th>
+                <th>CoreV net<span class="u">AED · %</span></th>
+                <th class="barcell">Split</th>
+              </tr>
+            </thead>
+            <tbody id="dgbody"></tbody>
+            <tfoot id="dgfoot"></tfoot>
+          </table>
+        </div>
+        <div class="legend">
+          <span class="k"><span class="sw" style="background:var(--input)"></span> Blue = editable input</span>
+          <span class="k"><span class="sw seg-oxe"></span> OxeFit cost</span>
+          <span class="k"><span class="sw seg-channel"></span> Channel (dealer margin + comm)</span>
+          <span class="k"><span class="sw seg-corev"></span> CoreV cost (ISR · B2B · referral · ops)</span>
+          <span class="k"><span class="sw seg-net"></span> CoreV net profit</span>
+        </div>
+      </section>
+
+      <div class="note">
+        <span class="ic">i</span>
+        <span>The dealer (OxePartner) channel adds a <b>tier-based dealer margin</b> (Bronze 10% · Silver 12.5% · Gold 15% · Premium 20%) plus a <b>dealer sales commission</b>, both on net revenue. CoreV's own cost stack here is granular: <b>ISR 0.5%</b> (capped at the ISR cap, B2C onboarding), <b>B2B 1%</b> (commercial only, on net+VAT), <b>base referral 2.5%</b> and <b>operational 5%</b>. OxeFit cost reflects the <b>4% contribution</b>. Selling price and products come from the catalog; discounts here are dealer-specific.</span>
+      </div>
+    </div><!-- /cost-dealer -->
 
   </div>
 
@@ -1191,6 +1261,7 @@ function render(){
   $("tfoot").innerHTML = "";
   renderKPIs();
   bindCells();
+  if(typeof renderDealer==="function") renderDealer();
   if(window.CoreVSync) window.CoreVSync.changed();
 }
 
@@ -1454,18 +1525,115 @@ $("d_clear").addEventListener("click", ()=>{ DEAL.items=[]; DEAL.extra=0; DEAL.f
 $("d_extra").addEventListener("input", e=>{ DEAL.extra=(parseFloat(e.target.value)||0)/100; renderDeal(); });
 $("d_free").addEventListener("input", e=>{ DEAL.freeUnits=parseInt(e.target.value)||0; renderDeal(); });
 
+/* ---------- Dealer (OxePartner) costing ---------- */
+const DEALER_TIERS = [
+  ["Bronze (under 10 units)", 0.10],
+  ["Silver (10-25 units)", 0.125],
+  ["Gold (25+ units)", 0.15],
+  ["Premium (25+ units)", 0.20],
+];
+let DG = { tier:"Premium (25+ units)", comm:0.02, isr:0.005, isrCap:500, b2b:0.01, ref:0.025, ops:0.05, contrib:0.04, disc:{} };
+function dealerMarginPct(){ const t=DEALER_TIERS.find(x=>x[0]===DG.tier); return t?t[1]:0.2; }
+
+function dealerCalc(r, commercial){
+  const sell = r.svc ? r.sell : r.msrp*G.exch*(1+G.markup[r.mk]);
+  const disc = (DG.disc[r.sku]!=null) ? DG.disc[r.sku] : (r.disc||0);
+  const netRev = sell - disc;
+  const oxe = (r.svc ? r.cost : r.cost*G.exch) * (1 - DG.contrib);
+  const gpbc = netRev - oxe, gpbcPct = netRev?gpbc/netRev:0;
+  const dMargin = netRev*dealerMarginPct();
+  const dComm = netRev*DG.comm;
+  const channel = dMargin + dComm;
+  const corevGP = gpbc - channel, corevGPpct = netRev?corevGP/netRev:0;
+  const isr = Math.min(netRev*DG.isr, DG.isrCap);
+  const b2b = commercial ? netRev*(1+G.vat)*DG.b2b : 0;
+  const ref = netRev*DG.ref;
+  const ops = netRev*DG.ops;
+  const corevCost = isr+b2b+ref+ops;
+  const net = corevGP - corevCost, netPct = sell?net/sell:0;
+  return {sell,disc,netRev,oxe,gpbc,gpbcPct,dMargin,dComm,channel,corevGP,corevGPpct,isr,b2b,ref,ops,corevCost,net,netPct};
+}
+
+function bindDealerAssum(){
+  const sel=$("dg_tier");
+  if(sel && !sel.dataset.built){ sel.innerHTML=DEALER_TIERS.map(t=>`<option value="${t[0]}">${t[0]}</option>`).join(""); sel.dataset.built="1"; }
+  if(sel){ sel.value=DG.tier; sel.onchange=e=>{ DG.tier=e.target.value; renderDealer(); dgChanged(); }; }
+  const map=[["dg_margin",()=>dealerMarginPct()*100,null,true],
+             ["dg_comm",()=>DG.comm*100,v=>DG.comm=v/100],
+             ["dg_isr",()=>DG.isr*100,v=>DG.isr=v/100],
+             ["dg_isrcap",()=>DG.isrCap,v=>DG.isrCap=v],
+             ["dg_b2b",()=>DG.b2b*100,v=>DG.b2b=v/100],
+             ["dg_ref",()=>DG.ref*100,v=>DG.ref=v/100],
+             ["dg_ops",()=>DG.ops*100,v=>DG.ops=v/100],
+             ["dg_contrib",()=>DG.contrib*100,v=>DG.contrib=v/100]];
+  map.forEach(([id,get,set,ro])=>{ const el=$(id); if(!el)return; el.value=+(+get()).toFixed(2);
+    if(!ro && !el.dataset.bound){ el.dataset.bound="1"; el.addEventListener("input",e=>{ set(parseFloat(e.target.value)||0); renderDealer(); dgChanged(); }); } });
+}
+
+function renderDealer(){
+  if(!$("dgbody")) return;
+  bindDealerAssum();
+  let body="", all=[];
+  DATA.forEach((g,gi)=>{
+    const commercial = gi>0;
+    body+=`<tr class="grouprow"><td colspan="12">${g.group}</td></tr>`;
+    g.rows.forEach((r,i)=>{
+      const c=dealerCalc(r, commercial); all.push(c);
+      const oxeW=c.netRev>0?Math.max(0,(c.oxe/c.netRev)*100):0;
+      const chW=c.netRev>0?Math.max(0,(c.channel/c.netRev)*100):0;
+      const cvW=c.netRev>0?Math.max(0,(c.corevCost/c.netRev)*100):0;
+      const netW=Math.max(0,100-oxeW-chW-cvW);
+      const thin=c.netPct<0.12;
+      body+=`<tr data-dsku="${r.sku}">
+        <td class="l"><div class="pname">${r.name}</div><div class="psku">${r.sku}</div></td>
+        <td class="derived">${fmt(c.sell)}</td>
+        <td><input class="cell-in dg-disc" type="number" value="${Math.round(c.disc)}"></td>
+        <td class="derived">${fmt(c.netRev)}</td>
+        <td class="derived">${fmt(c.oxe)}</td>
+        <td class="derived">${fmt(c.gpbc)} <span class="pct good">${pct(c.gpbcPct)}</span></td>
+        <td class="derived">${fmt(c.dMargin)}</td>
+        <td class="derived">${fmt(c.dComm)}</td>
+        <td class="derived">${fmt(c.corevGP)} <span class="pct good">${pct(c.corevGPpct)}</span></td>
+        <td class="derived">${fmt(c.corevCost)}</td>
+        <td class="derived net">${fmt(c.net)} <span class="pct ${thin?'thin':'good'}">${pct(c.netPct)}</span></td>
+        <td class="barcell"><div class="bar" title="OxeFit ${oxeW.toFixed(0)}% · Channel ${chW.toFixed(0)}% · CoreV ${cvW.toFixed(0)}% · Net ${netW.toFixed(0)}%">
+          <span class="seg-oxe" style="width:${oxeW}%"></span><span class="seg-channel" style="width:${chW}%"></span><span class="seg-corev" style="width:${cvW}%"></span><span class="seg-net" style="width:${netW}%"></span>
+        </div><div class="barpct">OxeFit ${oxeW.toFixed(0)}% · Channel ${chW.toFixed(0)}% · CoreV ${cvW.toFixed(0)}% · Net ${netW.toFixed(0)}%</div></td>
+      </tr>`;
+    });
+  });
+  $("dgbody").innerHTML=body;
+  $("dgfoot").innerHTML="";
+
+  const avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
+  const cards=[
+    {lbl:"Dealer margin (tier)", val:pct(dealerMarginPct()), meta:DG.tier},
+    {lbl:"Total channel cost", val:pct(dealerMarginPct()+DG.comm), meta:"dealer margin + sales comm"},
+    {lbl:"Avg gross profit", val:pct(avg(all.map(c=>c.corevGPpct))), meta:"CoreV gross · after channel"},
+    {lbl:"Avg CoreV net margin", val:pct(avg(all.map(c=>c.netPct))), meta:"on selling price"},
+    {lbl:"Lowest CoreV net margin", val:pct(all.length?Math.min(...all.map(c=>c.netPct)):0), meta:"min across dealer products"},
+  ];
+  $("dgkpis").innerHTML=cards.map(c=>`<div class="kpi"><div class="lbl">${c.lbl}</div><div class="val tnum">${c.val}</div><div class="meta">${c.meta}</div></div>`).join("");
+
+  $("dgbody").querySelectorAll(".dg-disc").forEach(inp=>inp.addEventListener("change",e=>{
+    const sku=e.target.closest("tr").dataset.dsku; DG.disc[sku]=parseFloat(e.target.value)||0; renderDealer(); dgChanged();
+  }));
+}
+function dgChanged(){ if(window.CoreVSync) window.CoreVSync.changed(); }
+
 ROOT.querySelectorAll(".costnav button").forEach(b=>b.addEventListener("click",()=>{
   ROOT.querySelectorAll(".costnav button").forEach(x=>x.classList.remove("active"));
   ROOT.querySelectorAll(".costsub").forEach(p=>p.classList.remove("active"));
   b.classList.add("active"); $(b.dataset.cs).classList.add("active");
   if(b.dataset.cs==="cost-deal") renderDeal();
+  if(b.dataset.cs==="cost-dealer") renderDealer();
 }));
 
 bindGlobals();
 render();
 if(window.CoreVSync) window.CoreVSync.register('costing',
-  ()=>({G,DATA,SVC,DEAL}),
-  env=>{ try{ if(env.G)G=env.G; if(Array.isArray(env.DATA))DATA=env.DATA; if(env.SVC&&Array.isArray(env.SVC.rows))SVC=env.SVC; if(env.DEAL&&Array.isArray(env.DEAL.items))DEAL=env.DEAL; bindGlobals(); render(); renderDeal(); }catch(_){} });
+  ()=>({G,DATA,SVC,DEAL,DG}),
+  env=>{ try{ if(env.G)G=env.G; if(Array.isArray(env.DATA))DATA=env.DATA; if(env.SVC&&Array.isArray(env.SVC.rows))SVC=env.SVC; if(env.DEAL&&Array.isArray(env.DEAL.items))DEAL=env.DEAL; if(env.DG&&typeof env.DG==='object'){ DG=Object.assign(DG,env.DG); if(!DG.disc)DG.disc={}; } bindGlobals(); render(); renderDeal(); renderDealer(); }catch(_){} });
 
 })();</script>
 <script>(function(){
