@@ -511,10 +511,10 @@
   .oxe-dsel{font-family:"Inter";font-size:13px}
   .oxe-row td{vertical-align:middle}
   .agree{font-size:11.5px;color:#41506A;background:#EEF1F6;border-radius:6px;padding:4px 9px;display:inline-block;line-height:1.5;font-family:"Inter";font-weight:500}
-  .oxe-costwrap{display:flex;align-items:center;gap:10px;justify-content:flex-end}
-  .oxe-costval{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
-  .oxe-devnote{font-size:10.5px;color:var(--muted);max-width:170px;text-align:right;line-height:1.35;font-family:"Inter"}
-  .oxe-dev{padding:5px 10px;font-size:11.5px;white-space:nowrap}
+  .oxe-costcell{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:200px}
+  .oxe-costtop{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+  .oxe-devnote{font-size:10.5px;color:var(--muted);text-align:right;line-height:1.45;font-family:"Inter";white-space:normal;word-break:break-word;max-width:260px}
+  .oxe-dev{padding:5px 10px;font-size:11.5px;white-space:nowrap;flex:0 0 auto}
   .paidprog{font-size:11px;color:var(--muted);text-align:center;min-width:62px;font-family:"Inter";font-weight:600}
   .pp-bar{height:5px;background:var(--line-2);border-radius:3px;margin-top:4px;overflow:hidden}
   .pp-bar i{display:block;height:100%;background:var(--pos)}
@@ -642,13 +642,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.24.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.24.1 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.24.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.24.1</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -2811,9 +2811,11 @@ function renderOxe(){
     if(FILTER.status && v.status!==FILTER.status) return;
     shown++; totalCost+=v.totalCost; totalOut+=v.outstanding;
     const src=oxeCostSource(d), items=oxeItemsOf(d);
-    const costVal = (src==="devices")
-      ? `<div class="oxe-derived">${fmt(v.totalCost)}</div><div class="oxe-devnote">${items.map(it=>oxeName(it.sku)+" ×"+((+it.qty)||0)).join(" · ")}</div>`
+    const costTop = (src==="devices")
+      ? `<span class="oxe-derived">${fmt(v.totalCost)}</span>`
       : `<input class="rm-in oxe-cost" type="number" data-dk="${encodeURIComponent(g.key)}" value="${Math.round(v.totalCost)}" title="OxeFit cost for this deal">`;
+    const devNote = (src==="devices" && items && items.length)
+      ? `<div class="oxe-devnote">${items.map(it=>oxeName(it.sku)+" ×"+((+it.qty)||0)).join(" · ")}</div>` : "";
     const fullyPaid = (v.total>0 && v.paidCount>=v.total);
     const paidCell = `<label class="oxe-paid" title="Mark OxeFit as paid for this deal">
         <input type="checkbox" class="oxe-paidchk" data-dk="${encodeURIComponent(g.key)}" ${fullyPaid?"checked":""}>
@@ -2824,7 +2826,7 @@ function renderOxe(){
       <td class="l" style="color:var(--muted)">${d.rep||"—"}</td>
       <td class="tnum">${fmt(d.gross)}</td>
       <td class="l"><span class="agree">${agreementText(d)}</span></td>
-      <td><div class="oxe-costwrap"><div class="oxe-costval">${costVal}</div><button class="btn oxe-dev" data-dk="${encodeURIComponent(g.key)}">🖥 Devices</button></div></td>
+      <td><div class="oxe-costcell"><div class="oxe-costtop">${costTop}<button class="btn oxe-dev" data-dk="${encodeURIComponent(g.key)}">🖥 Devices</button></div>${devNote}</div></td>
       <td class="l" style="color:var(--muted)">${v.nextDue?iso(v.nextDue):"—"}</td>
       <td><span class="st ${v.status}">${STLBL[v.status]}</span></td>
       <td>${paidCell}</td>
