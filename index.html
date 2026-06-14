@@ -643,13 +643,13 @@
       <button id="altSignIn" class="gate-alt">Having trouble? Try popup sign-in</button>
       <div id="authErr" class="gate-err"></div>
       <div class="gate-foot">Management access only</div>
-      <div class="gate-ver">v1.26.0 · 2026-06-14</div>
+      <div class="gate-ver">v1.27.0 · 2026-06-14</div>
     </div>
   </div>
 
   <div id="appRoot" style="display:none">
   <header class="topbar">
-    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.26.0</span></div>
+    <div class="brand"><span class="brand-logo-wrap"><img id="brandLogo" class="brand-logo" alt="OXEFIT by CoreV"></span><span class="sub">Finance Suite</span><span class="ver-tag">v1.27.0</span></div>
     <nav class="tabnav">
       <button data-tab="tab-costing" class="active"><span class="n">01</span>Costing</button>
       <button data-tab="tab-commission"><span class="n">02</span>Commission</button>
@@ -2580,7 +2580,7 @@ function parseMonth(s){
 }
 
 function defaultDef(){ return [ {name:"PO / Contract", pct:1.0, off:0} ]; }
-let CTRL={soon:7, def:defaultDef(), perDeal:{}, oxeRatio:0.50, oxeOv:{}, oxeItems:{}, oxePaid:{}};
+let CTRL={soon:7, def:defaultDef(), perDeal:{}, oxeRatio:0.50, oxeOv:{}, oxeItems:{}, oxePaid:{}, oxeDue:{}};
 let RECV_OV={};            // overrides keyed by milestone
 let OXE_OV={};             // OxeFit milestone paid overrides (local)
 let FILTER={cust:"",month:"",status:""};
@@ -2634,11 +2634,13 @@ function oxefitGroups(){
     const dealOv = CTRL.oxePaid ? CTRL.oxePaid[k] : undefined;   // true=paid, false=unpaid, undefined=auto (back-to-back)
     const rows=ms.map((m,mi)=>{
       const pct=(+m.pct)||0; cum+=pct;
-      const ckey=k+"|"+mi, cov=RECV_OV[ckey]||{};
-      const due = cov.due ? new Date(cov.due+"T00:00:00") : addDays(anchor,(+m.off)||0);   // mirror client milestone date
+      const ckey=k+"|"+mi, cov=RECV_OV[ckey]||{}, okey="oxe:"+ckey;
+      const ovDue = CTRL.oxeDue && CTRL.oxeDue[okey];                                       // explicit OxeFit due override
+      const due = ovDue ? new Date(ovDue+"T00:00:00")
+                : (cov.due ? new Date(cov.due+"T00:00:00") : addDays(anchor,(+m.off)||0));  // else mirror client milestone date
       const autoPaid=(d.collected||0) >= cum-1e-9;                                          // back-to-back: pay OxeFit as client collects
       const paid = (dealOv===true) ? true : (dealOv===false ? false : autoPaid);
-      return {key:"oxe:"+ckey,name:m.name,pct,amount:cost*pct,due,paid};
+      return {key:okey,name:m.name,pct,amount:cost*pct,due,paid};
     });
     return {deal:d, key:k, cost, paidOverride:dealOv, rows};
   });
@@ -2777,14 +2779,16 @@ function agreementText(d){ const ms=dealMs(d); return ms.map(m=>Math.round(((+m.
 function oxeDealView(g){
   const rows=g.rows, unpaid=rows.filter(r=>!r.paid);
   const outstanding=unpaid.reduce((a,r)=>a+r.amount,0);
-  const nextDue = unpaid.length ? unpaid.map(r=>r.due).sort((a,b)=>a-b)[0]
-               : (rows.length ? rows.map(r=>r.due).sort((a,b)=>b-a)[0] : null);
+  const sorted=[...rows].sort((a,b)=>a.due-b.due);
+  const nextRow = unpaid.length ? [...unpaid].sort((a,b)=>a.due-b.due)[0]
+               : (rows.length ? sorted[sorted.length-1] : null);
+  const nextDue = nextRow?nextRow.due:null, nextKey = nextRow?nextRow.key:null;
   let status;
   if(rows.length && !unpaid.length) status="paid";
   else if(unpaid.some(r=>statusOf(r.due,false)==="over")) status="over";
   else if(unpaid.some(r=>statusOf(r.due,false)==="soon")) status="soon";
   else status="up";
-  return {totalCost:g.cost, outstanding, nextDue, status, paidCount:rows.filter(r=>r.paid).length, total:rows.length};
+  return {totalCost:g.cost, outstanding, nextDue, nextKey, status, paidCount:rows.filter(r=>r.paid).length, total:rows.length};
 }
 function renderOxe(){
   if(!$("rm-oxeBody")) return;
@@ -2820,7 +2824,7 @@ function renderOxe(){
       <td class="tnum">${fmt(d.gross)}</td>
       <td class="l"><span class="agree">${agreementText(d)}</span></td>
       <td><div class="oxe-costcell"><div class="oxe-costtop">${costTop}<button class="btn oxe-dev" data-dk="${encodeURIComponent(g.key)}">🖥 Devices</button></div>${devNote}</div></td>
-      <td class="l" style="color:var(--muted)">${v.nextDue?iso(v.nextDue):"—"}</td>
+      <td class="l">${v.nextKey?`<input class="rm-in date oxe-due" type="date" data-mk="${encodeURIComponent(v.nextKey)}" value="${v.nextDue?iso(v.nextDue):''}" title="OxeFit due date — back-to-back default, editable">`:'<span style="color:var(--muted)">—</span>'}</td>
       <td><span class="st ${v.status}">${STLBL[v.status]}</span></td>
       <td>${paidCell}</td>
     </tr>`;
@@ -2847,6 +2851,11 @@ function renderOxe(){
   }));
   $("rm-oxeBody").querySelectorAll(".oxe-paidchk").forEach(c=>c.addEventListener("change",e=>{
     const k=decodeURIComponent(e.target.dataset.dk); CTRL.oxePaid=CTRL.oxePaid||{}; CTRL.oxePaid[k]=e.target.checked; renderOxe(); renderDashboard(); rmChanged();
+  }));
+  $("rm-oxeBody").querySelectorAll(".oxe-due").forEach(inp=>inp.addEventListener("change",e=>{
+    const mk=decodeURIComponent(e.target.dataset.mk); CTRL.oxeDue=CTRL.oxeDue||{};
+    if(e.target.value) CTRL.oxeDue[mk]=e.target.value; else delete CTRL.oxeDue[mk];
+    renderOxe(); renderDashboard(); rmChanged();
   }));
 }
 
@@ -3052,6 +3061,7 @@ if(window.CoreVSync) window.CoreVSync.register('reminders',
       if(c.oxeOv && typeof c.oxeOv==='object') CTRL.oxeOv=c.oxeOv;
       if(c.oxeItems && typeof c.oxeItems==='object') CTRL.oxeItems=c.oxeItems;
       if(c.oxePaid && typeof c.oxePaid==='object') CTRL.oxePaid=c.oxePaid;
+      if(c.oxeDue && typeof c.oxeDue==='object') CTRL.oxeDue=c.oxeDue;
     }
     if(!Array.isArray(CTRL.def)) CTRL.def=defaultDef();
     if(!CTRL.perDeal) CTRL.perDeal={};
@@ -3059,6 +3069,7 @@ if(window.CoreVSync) window.CoreVSync.register('reminders',
     if(!CTRL.oxeOv) CTRL.oxeOv={};
     if(!CTRL.oxeItems) CTRL.oxeItems={};
     if(!CTRL.oxePaid) CTRL.oxePaid={};
+    if(!CTRL.oxeDue) CTRL.oxeDue={};
     renderAll();
   }catch(_){} });
 
